@@ -99,9 +99,9 @@ function pickSupplier(type: BusinessDocType, ents: ExtractedEntity[], segs: Map<
   const labelled = sup.find((e) => e.label && /supplier|vendor|from|billed by|seller|issued by|payee|beneficiary|contractor|service provider/.test(e.label));
   if (labelled && type !== 'purchase_order') return labelled;
   if (type === 'purchase_order') {
-    return sup.find((e) => /(\bto|supplier|vendor)\s*[:\-]?\s*$/.test(windowBefore(segs, e, 20))) ?? labelled ?? sup[1] ?? sup[0];
+    return sup.find((e) => /(\bto|supplier|vendor)\s*[:-]?\s*$/.test(windowBefore(segs, e, 20))) ?? labelled ?? sup[1] ?? sup[0];
   }
-  const notBuyer = sup.filter((e) => !/(bill(ed)?\s*to|customer|client|sold\s*to|deliver\s*to|ship\s*to|buyer|between)\s*[:\-]?\s*$/.test(windowBefore(segs, e, 24)));
+  const notBuyer = sup.filter((e) => !/(bill(ed)?\s*to|customer|client|sold\s*to|deliver\s*to|ship\s*to|buyer|between)\s*[:-]?\s*$/.test(windowBefore(segs, e, 24)));
   return notBuyer[0] ?? sup[0];
 }
 

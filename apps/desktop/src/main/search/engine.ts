@@ -263,7 +263,7 @@ export class SearchEngine {
       d.segs.push({ ...h, score: s });
       perDoc.set(h.docId, d);
     }
-    for (const [docId, b] of docBoost) if (!perDoc.has(docId)) perDoc.set(docId, { score: 0, segs: [] });
+    for (const docId of docBoost.keys()) if (!perDoc.has(docId)) perDoc.set(docId, { score: 0, segs: [] });
     for (const [docId, d] of perDoc) {
       d.segs.sort((a, b) => b.score - a.score);
       d.score = (d.segs[0]?.score ?? 0) + d.segs.slice(1, 4).reduce((a, s) => a + s.score * 0.25, 0) + (docBoost.get(docId)?.score ?? 0);
