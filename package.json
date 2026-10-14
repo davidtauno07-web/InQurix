@@ -1,0 +1,40 @@
+{
+  "name": "inqurix",
+  "private": true,
+  "version": "0.1.0",
+  "description": "InQurix - intelligent document discovery, evidence retrieval and business intelligence",
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "apps/server",
+    "apps/desktop"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build:core": "npm run build -w @inqurix/core",
+    "build": "npm run build:core && npm run build -w @inqurix/server && npm run build -w @inqurix/desktop",
+    "typecheck": "npm run build:core && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "npm run build:core && npm run test --workspaces --if-present",
+    "fixtures": "npm run build:core && node scripts/generate-fixtures.mjs",
+    "dev:desktop": "npm run build:core && npm run dev -w @inqurix/desktop",
+    "dev:server": "npm run build:core && npm run dev -w @inqurix/server"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^22.20.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "globals": "^16.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "sharp": "^0.35.5",
+    "uuid": "^11.1.1",
+    "deepmerge-ts": "^8.0.2"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@inqurix/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InQurix Server - accounts, company workspace, permission-aware search, billing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- tsx watch src/index.ts",
+    "start": "dotenv -e ../../.env -- node dist/index.js",
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
+    "test": "dotenv -e ../../.env -- vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "dotenv -e ../../.env -- prisma migrate deploy",
+    "db:migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
+    "db:seed": "dotenv -e ../../.env -- tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@inqurix/core": "*",
+    "@node-rs/argon2": "^2.0.2",
+    "@prisma/client": "~6.19.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jose": "^6.1.0",
+    "nodemailer": "^10.1.1",
+    "otplib": "^12.0.1",
+    "pino": "^9.9.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.3",
+    "@types/nodemailer": "^7.0.0",
+    "@types/supertest": "^6.0.3",
+    "dotenv-cli": "^10.0.0",
+    "prisma": "~6.19.0",
+    "supertest": "^7.1.0",
+    "tsx": "^4.20.0"
+  }
+}

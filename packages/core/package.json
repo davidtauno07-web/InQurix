@@ -1,0 +1,32 @@
+{
+  "name": "@inqurix/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "fast-xml-parser": "^5.2.0",
+    "jszip": "^3.10.1",
+    "mailparser": "^3.7.0",
+    "mammoth": "^1.11.0",
+    "node-html-parser": "^7.0.0",
+    "pdfjs-dist": "^6.4.299",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/mailparser": "^3.4.6"
+  }
+}

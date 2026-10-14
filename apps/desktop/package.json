@@ -1,0 +1,43 @@
+{
+  "name": "@inqurix/desktop",
+  "productName": "InQurix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InQurix desktop - search inside your documents",
+  "author": "InQurix",
+  "homepage": "https://github.com/davidtauno07-web/InQurix",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "test": "vitest run",
+    "models": "node scripts/fetch-model.mjs",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb",
+    "dist:win": "npm run build && electron-builder --win nsis --x64",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "@inqurix/core": "*",
+    "chokidar": "^4.0.3",
+    "electron-updater": "^6.6.0",
+    "exceljs": "^4.4.0",
+    "pdfkit": "^0.17.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "^0.17.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "43.7.11",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "vite": "^7.1.0"
+  }
+}
