@@ -7,3 +7,4 @@ export * from './extract/index.js';
 export { htmlToText } from './extract/html.js';
 export { rtfToText } from './extract/rtf.js';
 export { parseCsv, decodeText, columnLetter } from './extract/text.js';
+export * from './records.js';

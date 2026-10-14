@@ -215,6 +215,8 @@ export interface BusinessRecord {
   bank?: { accountNumber?: string; bankName?: string; branchCode?: string; swift?: string; iban?: string; accountHolder?: string };
   contact?: { email?: string; phone?: string };
   paymentTermsDays?: number;
+  /** For statement/ledger rows: money leaving (out) or entering (in) the account. */
+  direction?: 'out' | 'in';
   lineItems: LineItem[];
   /** Field -> segment ordinal where it was found, for evidence linking. */
   fieldSources: Partial<Record<string, number>>;

@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape -- escaped "-" kept inside regex character classes for readability */
 import type { ExtractedEntity, ExtractedSegment, EntityType } from './types.js';
 import { CURRENCY_SYMBOLS, normalizeAccount, normalizeCompany, normalizeReference, parseAmount, parseDate, parseNumberWord } from './normalize.js';
 
@@ -61,6 +62,13 @@ const PERCENT_RE = /\b(\d{1,3}(?:[.,]\d{1,2})?)\s?%/g;
 
 const SUPPLIER_LABEL_RE = /\b(?:supplier|vendor|from|billed\s+by|seller|issued\s+by|company|payee|beneficiary|contractor|service\s+provider)\s*[:\-]\s*([A-Z][\w&.,'() \-]{2,60}?)(?=\s*(?:\n|;|\||$|\s{2,}|tel|phone|email|vat|reg|address|p\.?o\.?\s*box|\d{2,}))/gi;
 const COMPANY_RE = /\b([A-Z][A-Za-z&'.-]+(?:\s+[A-Z][A-Za-z&'.-]+){0,4}\s+(?:\(Pty\)\s+Ltd|Pty\s+Ltd|\(Pty\)\s+Limited|Ltd|Limited|CC|LLC|Inc\.?|GmbH|PLC|Holdings|Trading))\b/g;
+
+/** Canonical matching key for a business reference, e.g. "INV-01048" -> "inv:1048". */
+export function normalizeRefFor(type: EntityType, raw: string): string {
+  const prefix = type === 'invoice_number' ? 'inv' : type === 'po_number' ? 'po' : type === 'quote_number' ? 'q' : type === 'delivery_note_number' ? 'dn' : type === 'credit_note_number' ? 'cn' : '';
+  const normalized = normalizeReference(raw);
+  return prefix ? `${prefix}:${normalized.replace(new RegExp(`^(${prefix}|inv|po|qt|quo|q|dn|grn|cn)`), '')}` : normalized;
+}
 
 function labelBefore(text: string, offset: number): string | undefined {
   const window = text.slice(Math.max(0, offset - 40), offset).toLowerCase();
@@ -140,10 +148,7 @@ export function extractEntities(segment: Pick<ExtractedSegment, 'text' | 'ordina
       // Avoid treating dates as identifiers
       if (/^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}$/.test(raw)) continue;
       const offset = (m.index ?? 0) + m[0].lastIndexOf(m[1]);
-      const prefix = type === 'invoice_number' ? 'inv' : type === 'po_number' ? 'po' : type === 'quote_number' ? 'q' : type === 'delivery_note_number' ? 'dn' : type === 'credit_note_number' ? 'cn' : '';
-      let normalized = normalizeReference(raw);
-      if (prefix) normalized = `${prefix}:${normalized.replace(new RegExp(`^(${prefix}|inv|po|qt|quo|q|dn|grn|cn)`), '')}`;
-      push({ type, original: raw, normalized, confidence: 0.9, offset });
+      push({ type, original: raw, normalized: normalizeRefFor(type, raw), confidence: 0.9, offset });
     }
   }
 
@@ -208,6 +213,46 @@ export function extractEntities(segment: Pick<ExtractedSegment, 'text' | 'ordina
   return out.sort((a, b) => a.offset - b.offset);
 }
 
-export function extractAllEntities(segments: Pick<ExtractedSegment, 'text' | 'ordinal'>[]): ExtractedEntity[] {
-  return segments.flatMap((s) => extractEntities(s));
+const FIELD_AMOUNT = /amount|debit|credit|total|price|value|paid|cost|balance/i;
+const FIELD_REFS: [RegExp, EntityType][] = [
+  [/invoice/i, 'invoice_number'],
+  [/\bpo\b|purchase\s*order|order\s*(no|number)/i, 'po_number'],
+  [/^ref|reference|payment\s*(ref|no)/i, 'payment_reference'],
+  [/trans(action)?\s*(id|ref|no)/i, 'transaction_id'],
+];
+
+/** Entities from segment text plus, for spreadsheet rows, header-typed cell values (e.g. a bare 14317.5 under "Amount"). */
+export function extractAllEntities(segments: (Pick<ExtractedSegment, 'text' | 'ordinal'> & { fields?: Record<string, string> })[]): ExtractedEntity[] {
+  const out: ExtractedEntity[] = [];
+  for (const s of segments) {
+    const ents = extractEntities(s);
+    if (s.fields) {
+      for (const [h, raw] of Object.entries(s.fields)) {
+        const v = raw.trim();
+        if (!v) continue;
+        const offset = Math.max(0, s.text.indexOf(v));
+        if (FIELD_AMOUNT.test(h) && !/date/i.test(h)) {
+          const n = parseAmount(v);
+          if (n !== undefined && !ents.some((e) => e.type === 'amount' && e.numeric === n)) {
+            const cur = /\b(NAD|ZAR|USD|EUR|GBP)\b/i.exec(h)?.[1]?.toUpperCase();
+            ents.push({ type: 'amount', original: v, normalized: `${cur ?? ''}${n.toFixed(2)}`, numeric: n, currency: cur, label: h.toLowerCase(), origin: 'extracted', confidence: 0.85, segmentOrdinal: s.ordinal, offset });
+          }
+          continue;
+        }
+        if (/account/i.test(h) && /^\d[\d\s-]{5,}$/.test(v)) {
+          const norm = v.replace(/[\s-]/g, '');
+          if (!ents.some((e) => e.type === 'bank_account' && e.normalized === norm)) ents.push({ type: 'bank_account', original: v, normalized: norm, label: h.toLowerCase(), origin: 'extracted', confidence: 0.8, segmentOrdinal: s.ordinal, offset });
+          continue;
+        }
+        for (const [re, type] of FIELD_REFS) {
+          if (!re.test(h) || !/\d/.test(v)) continue;
+          const norm = normalizeRefFor(type, v);
+          if (!ents.some((e) => e.type === type && e.normalized === norm)) ents.push({ type, original: v, normalized: norm, label: h.toLowerCase(), origin: 'extracted', confidence: 0.85, segmentOrdinal: s.ordinal, offset });
+          break;
+        }
+      }
+    }
+    out.push(...ents);
+  }
+  return out;
 }
