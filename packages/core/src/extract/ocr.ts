@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { ExtractedSegment } from '../types.js';
 import { normalizeText } from '../normalize.js';
 
@@ -30,9 +32,8 @@ async function getWorker(opts: OcrOptions): Promise<TesseractWorker> {
     workerPromise = createWorker(opts.lang ?? 'eng', 1, {
       ...(opts.langPath ? { langPath: opts.langPath } : {}),
       ...(opts.cachePath ? { cachePath: opts.cachePath } : {}),
-      gzip: true,
+      gzip: opts.langPath ? fs.existsSync(path.join(opts.langPath, `${opts.lang ?? 'eng'}.traineddata.gz`)) : true,
       logger: () => undefined,
-      errorHandler: () => undefined,
     }) as unknown as Promise<TesseractWorker>;
   }
   return workerPromise;

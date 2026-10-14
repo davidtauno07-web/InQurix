@@ -10,7 +10,7 @@ import { CURRENCY_SYMBOLS, normalizeAccount, normalizeCompany, normalizeReferenc
 
 const CUR = String.raw`(?:N\$|US\$|A\$|C\$|NAD|ZAR|USD|EUR|GBP|BWP|KES|NGN|AUD|CAD|CHF|JPY|INR|CNY|R(?=\s?\d)|\$|€|£|₦|¥|₹)`;
 const NUM = String.raw`\(?-?\d{1,3}(?:[ ,.\u00a0']\d{3})*(?:[.,]\d{1,2})?\)?|\(?-?\d+(?:[.,]\d{1,2})?\)?`;
-const AMOUNT_RE = new RegExp(String.raw`(${CUR})\s?(${NUM})(?![\d])|(${NUM})\s?(${CUR.replace('|R(?=\\s?\\d)', '').replace('|\\$', '')})(?![A-Za-z])`, 'g');
+const AMOUNT_RE = new RegExp(String.raw`(${CUR})\s?(${NUM})(?![\d])|(${NUM})\s?(${CUR.replace('|R(?=\\s?\\d)', '').replace('|\\$', '')})(?![A-Za-z]|\s?[\d$])`, 'g');
 
 const MONTH = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
 const DATE_RE = new RegExp(
@@ -27,7 +27,7 @@ interface RefPattern {
 // before it decides the type, so "Invoice No: 1048" and "INV-1048" both match.
 const REF_PATTERNS: RefPattern[] = [
   { type: 'invoice_number', re: /\b(?:tax\s+)?invoice\s*(?:no\.?|number|nr\.?|#|ref(?:erence)?\.?)?\s*[:#]?\s*((?:[A-Z]{1,5}[-/ ]?)?\d[\w\-/]{1,24})/gi },
-  { type: 'invoice_number', re: /\b(INV[-/ ]?\d[\w\-/]{1,20})\b/gi },
+  { type: 'invoice_number', re: /\b(INV[-/ ]?\d[\w\-/]{0,20})\b/gi },
   { type: 'po_number', re: /\b(?:purchase\s+order|p\.?\s?o\.?)\s*(?:no\.?|number|nr\.?|#|ref(?:erence)?\.?)?\s*[:#]?\s*((?:PO[-/ ]?)?\d[\w\-/]{1,20})/gi },
   { type: 'po_number', re: /\b(PO[-/ ]?\d[\w\-/]{1,20})\b/gi },
   { type: 'quote_number', re: /\b(?:quotation|quote)\s*(?:no\.?|number|nr\.?|#|ref(?:erence)?\.?)?\s*[:#]?\s*((?:Q(?:T|UO)?[-/ ]?)?\d[\w\-/]{1,20})/gi },

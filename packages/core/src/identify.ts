@@ -132,7 +132,7 @@ export function identify(head: Uint8Array, name: string, zipEntries?: string[]):
     if (textKind) return mk(textKind);
     if (sample.startsWith('<!doctype html') || sample.startsWith('<html')) return mk('html');
     if (/^(received|from|return-path|message-id|mime-version|date|subject):/im.test(sample) && /\n(from|subject):/i.test(sample)) return mk('eml');
-    if (!ext || ext === 'text') return mk('txt');
+    if (!ext || ext === 'text' || extToKind(ext)) return mk('txt');
     return { kind: 'unknown', mime: MIME.unknown, mismatch: false, dangerous: false, reason: `Unsupported text format .${ext}` };
   }
   return { kind: 'unknown', mime: MIME.unknown, mismatch: false, dangerous: false, reason: ext ? `Unsupported format .${ext}` : 'Unrecognised binary format' };

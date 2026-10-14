@@ -11,3 +11,4 @@ coverage/
 *.tsbuildinfo
 apps/desktop/resources/models/
 .e2e/
+fixtures/out/
