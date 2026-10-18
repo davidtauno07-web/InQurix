@@ -142,7 +142,7 @@ export function findScamIndicators(records: FinRecord[], documents: FinDocument[
       evidence: [...evidence, ...(lookalike ? [...(knownDomains.get(lookalike) ?? [])].slice(0, 2).map((id) => ({ documentId: String(id), documentName: records.find((r) => r.docId === id)?.docName ?? documents.find((d) => d.docId === id)?.name ?? '', field: 'known domain', originalValue: lookalike! })) : [])],
       unresolved: bank?.unresolved ?? [],
       amount: bank?.amount,
-      limitations: ['These are patterns often seen in payment-redirection fraud, but a genuine supplier can send a message with the same features. InQurix cannot tell who sent the message.', 'Email headers (SPF/DKIM) are not verified.'],
+      limitations: ['These are patterns often seen in payment-redirection attempts, but a genuine supplier can send a message with the same features. InQurix cannot tell who sent the message.', 'Email headers (SPF/DKIM) are not verified.'],
       verification: ['Do not use contact details from this message. Phone the supplier on a number from your records.', 'Hold any payment to the new account until the change is confirmed.'],
       overlapsWith: bank ? [bank.id] : [],
     });
