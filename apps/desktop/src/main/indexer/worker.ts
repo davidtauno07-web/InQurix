@@ -31,7 +31,7 @@ const queue: ({ kind: 'scan'; sourceId: number } | { kind: 'file'; sourceId: num
 const watchers = new Map<number, FSWatcher>();
 
 const sources = () => db.prepare('SELECT * FROM sources WHERE enabled = 1').all() as unknown as SourceRow[];
-const opts = () => ({ limits: { ...DEFAULT_LIMITS, ocr: config.ocr }, ocr: config.ocr && config.tessdata ? { langPath: config.tessdata } : undefined, embed: config.semantic ? embedder : undefined });
+const opts = () => ({ limits: { ...DEFAULT_LIMITS, ocr: config.ocr }, ocr: config.ocr ? { ...(config.tessdata ? { langPath: config.tessdata } : {}), cachePath: path.join(path.dirname(config.dbPath), 'ocr-cache') } : undefined, embed: config.semantic ? embedder : undefined });
 const state = () => post({ type: 'state', paused, busy, queue: queue.length });
 
 async function ensureEmbedder() {
