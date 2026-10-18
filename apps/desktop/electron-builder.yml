@@ -1,0 +1,49 @@
+appId: com.inqurix.desktop
+productName: InQurix
+executableName: InQurix
+copyright: Copyright © 2026 InQurix
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**
+  - package.json
+  - "!**/*.map"
+extraResources:
+  - from: resources/models
+    to: models
+    filter: ["**/*"]
+  - from: resources/icon.png
+    to: icon.png
+asar: true
+asarUnpack:
+  - "**/node_modules/onnxruntime-node/**"
+  - "**/node_modules/sharp/**"
+  - "**/node_modules/@img/**"
+npmRebuild: false
+win:
+  target: [nsis]
+  icon: resources/icon.png
+  artifactName: InQurix-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  runAfterFinish: true
+linux:
+  target: [AppImage, deb]
+  category: Office
+  executableName: inqurix
+  icon: resources/icon.png
+  maintainer: InQurix <support@inqurix.local>
+mac:
+  target: [dmg, zip]
+  category: public.app-category.productivity
+  icon: resources/icon.png
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # Signing and notarisation need an Apple Developer ID on a Mac: set CSC_LINK / APPLE_ID etc. in the build environment.
+publish: null
+extraMetadata:
+  name: inqurix

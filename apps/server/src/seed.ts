@@ -31,9 +31,10 @@ await prisma.sourceGrant.upsert({ where: { sourceId_userId: { sourceId: finance.
 if (!(await prisma.source.findFirst({ where: { orgId: org.id, name: 'Company policies' } }))) await prisma.source.create({ data: { orgId: org.id, name: 'Company policies', allMembers: true, createdById: ids.owner! } });
 if (!(await prisma.creditEntry.findFirst({ where: { orgId: org.id } }))) await prisma.creditEntry.create({ data: { orgId: org.id, delta: 2000, balanceAfter: 2000, reason: 'Demo starting credits', idempotencyKey: `seed:${org.id}` } });
 
-const dir = path.join(root, 'fixtures/out/Documents/Finance');
+const dir = path.join(root, 'fixtures/out');
 if (fs.existsSync(dir)) {
   for (const f of fs.readdirSync(dir)) {
+    if (!fs.statSync(path.join(dir, f)).isFile()) continue;
     const buf = fs.readFileSync(path.join(dir, f));
     const sha256 = createHash('sha256').update(buf).digest('hex');
     if (await prisma.document.findUnique({ where: { sourceId_sha256: { sourceId: finance.id, sha256 } } })) continue;
