@@ -216,6 +216,11 @@ export class SearchEngine {
         entityQuery('e.type = ? AND e.normalized = ?', [r.type, r.normalized], `reference:${r.original}`);
       }
     }
+    for (const r of p.refs) {
+      const digits = r.original.replace(/\D/g, '').replace(/^0+/, '');
+      const own = db.prepare("SELECT DISTINCT doc_id docId FROM records WHERE number_norm = ? OR (length(?) >= 3 AND number_norm LIKE ?)").all(r.normalized, digits, `%${digits}`) as { docId: number }[];
+      for (const o of own) if (!req.allowedDocIds || req.allowedDocIds.has(o.docId)) addDocBoost(o.docId, 0.05, `own_ref:${r.original}`);
+    }
     for (const d of p.dates) entityQuery("e.type = 'date' AND e.iso_date = ?", [d], `date:${d}`);
     for (const acc of p.accounts) entityQuery("e.type IN ('bank_account','iban') AND e.normalized = ?", [acc], `account:${acc}`);
     for (const em of p.emails) entityQuery("e.type = 'email' AND e.normalized = ?", [em], `email:${em}`);
@@ -331,6 +336,7 @@ function explain(reasons: string[], p: ParsedQuery, segs: SegHit[]): string[] {
     const missing = p.terms.filter((t) => !found.includes(t));
     if (found.length) out.push(`Content matches: ${found.join(', ')}${missing.length ? ` (not found: ${missing.join(', ')})` : ''}`);
   }
+  for (const r of reasons.filter((x) => x.startsWith('own_ref:'))) out.push(`This document is ${r.slice(8)} (its own reference number)`);
   if (reasons.includes('name')) out.push('File name or title matches');
   const sem = reasons.filter((r) => r.startsWith('semantic:')).map((r) => Number(r.slice(9)));
   if (sem.length) out.push(`Similar meaning to your search (similarity ${Math.max(...sem).toFixed(2)})`);

@@ -1,4 +1,3 @@
-import { parentPort, workerData } from 'node:worker_threads';
 import path from 'node:path';
 import { watch, type FSWatcher } from 'chokidar';
 import { DEFAULT_LIMITS, extensionOf, SUPPORTED_EXTENSIONS, terminateOcr } from '@inqurix/core';
@@ -16,7 +15,11 @@ export type WorkerIn =
   | { type: 'shutdown' };
 export type WorkerOut = { type: 'progress'; progress: ScanProgress } | { type: 'changed' } | { type: 'state'; paused: boolean; busy: boolean; queue: number } | { type: 'log'; level: string; message: string };
 
-let config = workerData as WorkerConfig;
+// Runs as a separate Node process (Electron binary with ELECTRON_RUN_AS_NODE) so native modules (ONNX, canvas, SQLite)
+// and PDF.js run in a plain Node environment and a crash cannot take down the UI.
+const parentPort = process.send ? { postMessage: (m: unknown) => process.send?.(m), on: (_ev: 'message', cb: (e: { data: unknown }) => void) => process.on('message', (data) => cb({ data })) } : undefined;
+process.on('disconnect', () => process.exit(0));
+let config = JSON.parse(process.env.INQURIX_WORKER_CONFIG ?? '{}') as WorkerConfig;
 const db = openDatabase(config.dbPath);
 const post = (m: WorkerOut) => parentPort?.postMessage(m);
 const SUPPORTED = new Set(SUPPORTED_EXTENSIONS);
@@ -98,7 +101,8 @@ function enqueueScan(id?: number) {
   pump();
 }
 
-parentPort?.on('message', async (m: WorkerIn) => {
+parentPort?.on('message', async ({ data }) => {
+  const m = data as WorkerIn;
   switch (m.type) {
     case 'scan': enqueueScan(m.sourceId); break;
     case 'pause': paused = true; abort.abort(); abort = new AbortController(); state(); break;

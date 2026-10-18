@@ -1,7 +1,7 @@
 import { app, BrowserWindow, globalShortcut, Menu, nativeImage, screen, shell, Tray } from 'electron';
+import { fork, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
-import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import { openDatabase } from './db/index.js';
 import { SearchEngine } from './search/engine.js';
@@ -21,7 +21,7 @@ const dbPath = path.join(userData, 'index.db');
 let quick: BrowserWindow | undefined;
 let workspace: BrowserWindow | undefined;
 let tray: Tray | undefined;
-let worker: Worker | undefined;
+let worker: ChildProcess | undefined;
 let embedder: Embedder | undefined;
 let quitting = false;
 let indexPaused = false;
@@ -47,6 +47,7 @@ function hardenWindow(win: BrowserWindow) {
 function createQuick() {
   quick = new BrowserWindow({ width: 720, height: 520, show: false, frame: false, resizable: false, skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, minimizable: false, maximizable: false, backgroundColor: '#ffffff', title: 'InQurix Quick Search', webPreferences: secure });
   quick.setAlwaysOnTop(true, 'floating');
+  quick.on('page-title-updated', (e) => e.preventDefault());
   hardenWindow(quick);
   load(quick, 'quick');
   quick.on('blur', () => { if (!process.env.INQURIX_E2E_KEEP_QUICK) quick?.hide(); });
@@ -90,15 +91,15 @@ function registerShortcut(s: Settings): boolean {
 
 function startWorker() {
   const s = settings.get();
-  worker = new Worker(path.join(__dirname, 'worker.js'), { workerData: { dbPath, modelsDir, tessdata, ocr: s.ocr, semantic: s.semantic, reconcileMinutes: s.reconcileMinutes } });
+  const config = { dbPath, modelsDir, tessdata, ocr: s.ocr, semantic: s.semantic, reconcileMinutes: s.reconcileMinutes };
+  worker = fork(path.join(__dirname, 'worker.js'), [], { execPath: process.execPath, stdio: ['ignore', 'inherit', 'inherit', 'ipc'], env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', INQURIX_WORKER_CONFIG: JSON.stringify(config) } });
   worker.on('message', (m: WorkerOut) => {
     if (m.type === 'progress') broadcast('index:progress', m.progress);
     else if (m.type === 'state') { indexPaused = m.paused; broadcast('index:state', m); updateTray(); }
     else if (m.type === 'changed') broadcast('index:changed');
     else if (m.type === 'log') console[m.level === 'error' ? 'error' : 'warn'](`[indexer] ${m.message}`);
   });
-  worker.on('error', (e) => console.error('[indexer] crashed', e));
-  worker.on('exit', (code) => { if (!quitting && code !== 0) setTimeout(startWorker, 2000); });
+  worker.on('exit', (code) => { worker = undefined; if (!quitting) { console.error(`[indexer] exited with code ${code}; restarting`); setTimeout(startWorker, 2000); } });
 }
 
 function updateTray() {
@@ -108,7 +109,7 @@ function updateTray() {
     { label: 'Quick Search', accelerator: accel, click: showQuick },
     { label: 'Open InQurix', click: () => openWorkspace() },
     { type: 'separator' },
-    { label: indexPaused ? 'Resume indexing' : 'Pause indexing', click: () => worker?.postMessage({ type: indexPaused ? 'resume' : 'pause' }) },
+    { label: indexPaused ? 'Resume indexing' : 'Pause indexing', click: () => worker?.send({ type: indexPaused ? 'resume' : 'pause' }) },
     { label: 'Settings…', click: () => openWorkspace('settings') },
     { type: 'separator' },
     { label: 'Quit InQurix', click: () => { quitting = true; app.quit(); } },
@@ -123,7 +124,7 @@ async function loadEmbedder() {
 app.on('second-instance', () => showQuick());
 app.on('window-all-closed', () => { /* stay resident in tray; indexing continues */ });
 app.on('before-quit', () => { quitting = true; });
-app.on('will-quit', () => { globalShortcut.unregisterAll(); worker?.postMessage({ type: 'shutdown' }); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); worker?.send({ type: 'shutdown' }); });
 app.on('activate', () => openWorkspace());
 
 app.whenReady().then(async () => {
@@ -133,7 +134,7 @@ app.whenReady().then(async () => {
   const engine = new SearchEngine(db, () => embedder);
   registerIpc({
     db, engine, settings,
-    worker: () => worker!,
+    worker: () => (worker ? { postMessage: (m: unknown) => worker?.send(m as object) } : undefined),
     hideQuick: () => quick?.hide(),
     openWorkspace,
     owner: () => BrowserWindow.getFocusedWindow() ?? workspace ?? undefined,
@@ -141,7 +142,7 @@ app.whenReady().then(async () => {
       if (prev.shortcut !== next.shortcut) registerShortcut(next);
       if (prev.launchAtLogin !== next.launchAtLogin) app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, openAsHidden: true });
       if (prev.semantic !== next.semantic) void loadEmbedder();
-      worker?.postMessage({ type: 'config', config: { ocr: next.ocr, semantic: next.semantic, reconcileMinutes: next.reconcileMinutes } });
+      worker?.send({ type: 'config', config: { ocr: next.ocr, semantic: next.semantic, reconcileMinutes: next.reconcileMinutes } });
       updateTray();
     },
   });

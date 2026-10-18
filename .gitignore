@@ -12,3 +12,5 @@ coverage/
 apps/desktop/resources/models/
 .e2e/
 fixtures/out/
+test-results/
+playwright-report/

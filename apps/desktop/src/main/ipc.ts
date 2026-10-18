@@ -1,7 +1,6 @@
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Worker } from 'node:worker_threads';
 import { now, type DB } from './db/index.js';
 import type { SearchEngine, SearchRequest } from './search/engine.js';
 import type { Settings, SettingsStore } from './settings.js';
@@ -11,14 +10,14 @@ export interface IpcContext {
   db: DB;
   engine: SearchEngine;
   settings: SettingsStore;
-  worker: () => Worker;
+  worker: () => { postMessage(m: unknown): void } | undefined;
   hideQuick: () => void;
   openWorkspace: (route?: string) => void;
   applySettings: (prev: Settings, next: Settings) => void;
   owner: () => BrowserWindow | undefined;
 }
 
-const send = (ctx: IpcContext, m: WorkerIn) => ctx.worker().postMessage(m);
+const send = (ctx: IpcContext, m: WorkerIn) => ctx.worker()?.postMessage(m);
 
 export function registerIpc(ctx: IpcContext): void {
   const { db } = ctx;
