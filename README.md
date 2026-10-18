@@ -48,3 +48,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, packaging and troubles
 - [docs/BILLING.md](docs/BILLING.md): plans, credits, Paddle setup and webhooks
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): setup, tests, packaging and releases
 - [docs/STATUS.md](docs/STATUS.md): what is implemented, tested, incomplete or needs credentials
+- [Source configuration & connectors](docs/SOURCES.md)
+- [Indexing & search troubleshooting](docs/TROUBLESHOOTING.md)
+- [Databases & migrations](docs/DATABASE.md)
+- [Release checklist](docs/RELEASE-CHECKLIST.md)

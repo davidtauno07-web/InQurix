@@ -56,3 +56,6 @@ Output goes to `apps/desktop/release/`. The configuration is in `apps/desktop/el
 2. Run `npm run lint && npm run typecheck && npm test && npm run e2e -w @inqurix/desktop`.
 3. Build installers on each OS (or in CI runners for each OS), sign them, and publish them.
 4. Deploy the server: `npm ci && npm run build && npm run db:migrate -w @inqurix/server && npm start -w @inqurix/server` behind HTTPS (set `APP_URL` to the https origin so cookies are marked `Secure`).
+
+### Cross-building the Windows installer on Linux
+This needs `wine64` installed, plus the Windows `sharp` binary: `npm install --no-save --force @img/sharp-win32-x64@<installed sharp version>`. Then run `cd apps/desktop && npx electron-builder --win nsis --x64`. The resulting `release/InQurix-Setup-<version>.exe` is unsigned, and the installer built this way has not been run on real Windows.
