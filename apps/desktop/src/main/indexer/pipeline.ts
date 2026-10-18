@@ -302,11 +302,12 @@ export async function scanSource(db: DB, source: SourceRow, opts: PipelineOption
   db.prepare("UPDATE sources SET status = 'scanning', error = NULL, last_scan_started_at = ? WHERE id = ?").run(now(), source.id);
   emit();
   let dirErrors = 0;
+  const unreadable: string[] = []; // never treat files under an unreadable folder as deleted
   const files = await discover(source.path, {
     includeHidden: !!source.include_hidden,
     exclusions: loadExclusions(db, source.id),
     signal: opts.signal,
-    onError: (p, e) => { dirErrors++; logEvent(db, 'warn', 'discover_error', `${p}: ${e.message}`, { sourceId: source.id }); },
+    onError: (p, e) => { dirErrors++; unreadable.push(p); logEvent(db, 'warn', 'discover_error', `${p}: ${e.message}`, { sourceId: source.id }); },
   });
   progress.discovered = files.length;
   progress.phase = 'indexing';
@@ -334,7 +335,7 @@ export async function scanSource(db: DB, source: SourceRow, opts: PipelineOption
   progress.current = undefined;
   emit();
   const known = db.prepare('SELECT id, path FROM documents WHERE source_id = ? AND parent_id IS NULL').all(source.id) as { id: number; path: string }[];
-  const gone = known.filter((d) => !seen.has(d.path));
+  const gone = known.filter((d) => !seen.has(d.path) && !unreadable.some((u) => d.path === u || d.path.startsWith(u + path.sep)));
   if (gone.length) {
     tx(db, () => gone.forEach((d) => deleteDocRow(db, d.id)));
     logEvent(db, 'info', 'reconciled', `Removed ${gone.length} deleted or excluded file(s)`, { sourceId: source.id });

@@ -260,6 +260,7 @@ authRouter.get('/google/callback', ah(async (req, res) => {
   const sub = String(payload.sub), mail = String(payload.email ?? '').toLowerCase();
   if (!payload.email_verified || !mail) throw new HttpError(403, 'Your Google email address is not verified', 'oauth_unverified');
   let user = await prisma.user.findUnique({ where: { googleSub: sub } }) ?? await prisma.user.findUnique({ where: { email: mail } });
+  if (user && !user.googleSub && user.passwordHash) throw new HttpError(409, 'An account with this email already exists. Sign in with your email and password.', 'account_exists');
   if (user && !user.googleSub) user = await prisma.user.update({ where: { id: user.id }, data: { googleSub: sub, emailVerifiedAt: user.emailVerifiedAt ?? new Date() } });
   if (!user) {
     const name = String(payload.name ?? mail.split('@')[0]);

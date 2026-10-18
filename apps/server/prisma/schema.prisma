@@ -111,7 +111,7 @@ model Source {
   org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   name        String
   allMembers  Boolean       @default(false)
-  createdById String
+  createdById String?
   createdAt   DateTime      @default(now())
   grants      SourceGrant[]
   documents   Document[]
@@ -124,6 +124,7 @@ model SourceGrant {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   canExport Boolean  @default(false)
+  canUpload Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@unique([sourceId, userId])
@@ -159,6 +160,7 @@ model Segment {
 }
 
 model CreditEntry {
+  seq          Int      @default(autoincrement())
   id             String       @id @default(cuid())
   orgId          String
   org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)

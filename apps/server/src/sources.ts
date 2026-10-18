@@ -36,7 +36,7 @@ export async function sourceAccess(req: Request, sourceId: string) {
   const manage = membership.role === 'owner' || membership.role === 'admin';
   const read = source.allMembers || source.createdById === userId || !!grant;
   const exportable = read && (manage || source.createdById === userId || !!grant?.canExport);
-  const upload = read && membership.role !== 'viewer';
+  const upload = read && membership.role !== 'viewer' && (manage || source.createdById === userId || source.allMembers || !!grant?.canUpload);
   return { source, role: membership.role, read, manage, exportable, upload };
 }
 
@@ -71,7 +71,7 @@ sourcesRouter.get('/orgs/:orgId/sources', ah(async (req, res) => {
   const sources = await prisma.source.findMany({ where: { orgId }, include: { _count: { select: { documents: true } }, grants: { include: { user: true } } }, orderBy: { createdAt: 'asc' } });
   res.json(sources.filter((s) => manage || readable.has(s.id)).map((s) => ({
     id: s.id, name: s.name, allMembers: s.allMembers, documents: s._count.documents, canRead: readable.has(s.id),
-    grants: manage ? s.grants.map((g) => ({ userId: g.userId, name: g.user.name, email: g.user.email, canExport: g.canExport })) : undefined,
+    grants: manage ? s.grants.map((g) => ({ userId: g.userId, name: g.user.name, email: g.user.email, canExport: g.canExport, canUpload: g.canUpload })) : undefined,
   })));
 }));
 
@@ -88,9 +88,9 @@ sourcesRouter.put('/sources/:sourceId/grants/:userId', ah(async (req, res) => {
   const a = await sourceAccess(req, param(req, 'sourceId'));
   const userId = param(req, 'userId');
   if (!a.manage) throw new HttpError(403, 'Only owners and admins can share sources', 'forbidden');
-  const b = parse(z.object({ canExport: z.boolean().default(false) }), req.body ?? {});
+  const b = parse(z.object({ canExport: z.boolean().default(false), canUpload: z.boolean().default(false) }), req.body ?? {});
   if (!(await prisma.membership.findUnique({ where: { orgId_userId: { orgId: a.source.orgId, userId } } }))) throw new HttpError(400, 'Only members of this organisation can be given access', 'not_member');
-  await prisma.sourceGrant.upsert({ where: { sourceId_userId: { sourceId: a.source.id, userId } }, create: { sourceId: a.source.id, userId, canExport: b.canExport }, update: { canExport: b.canExport } });
+  await prisma.sourceGrant.upsert({ where: { sourceId_userId: { sourceId: a.source.id, userId } }, create: { sourceId: a.source.id, userId, canExport: b.canExport, canUpload: b.canUpload }, update: { canExport: b.canExport, canUpload: b.canUpload } });
   await audit('source.grant', { orgId: a.source.orgId, userId: req.auth!.user.id, target: `${a.source.id}:${userId}`, meta: b, ip: req.ip });
   res.json({ ok: true });
 }));

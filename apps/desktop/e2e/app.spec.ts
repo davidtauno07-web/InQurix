@@ -29,7 +29,7 @@ const quickVisible = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.get
 test.beforeAll(async () => {
   fs.mkdirSync(shots, { recursive: true });
   execFileSync(process.execPath, [path.join(root, 'scripts/generate-fixtures.mjs'), docs]);
-  app = await electron.launch({ args: [appDir, '--no-sandbox'], env: { ...process.env, INQURIX_USER_DATA: path.join(tmp, 'userdata'), INQURIX_E2E_KEEP_QUICK: '1' } });
+  app = await electron.launch({ args: [appDir, '--no-sandbox'], env: { ...process.env, INQURIX_USER_DATA: path.join(tmp, 'userdata'), INQURIX_E2E_KEEP_QUICK: '1', INQURIX_E2E: '1' } });
   app.on('window', (p) => p.on('request', (r) => { if (!/^(file|devtools|data|chrome-extension):/.test(r.url())) externalRequests.push(r.url()); }));
   await app.evaluate(({ shell }) => {
     const g = globalThis as unknown as { __opened: string[]; __revealed: string[] };

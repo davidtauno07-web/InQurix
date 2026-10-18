@@ -107,6 +107,7 @@ orgsRouter.delete('/orgs/:orgId/members/:userId', ah(async (req, res) => {
   if (target.role === 'owner' && (await ownerCount(orgId)) <= 1) throw new HttpError(409, 'An organisation needs at least one owner', 'last_owner');
   await prisma.$transaction([
     prisma.sourceGrant.deleteMany({ where: { userId, source: { orgId } } }),
+    prisma.source.updateMany({ where: { orgId, createdById: userId }, data: { createdById: null } }),
     prisma.membership.delete({ where: { id: target.id } }),
   ]);
   await audit('org.member_removed', { orgId, userId: req.auth!.user.id, target: userId, ip: req.ip });

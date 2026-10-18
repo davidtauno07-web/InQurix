@@ -22,7 +22,7 @@ async function lockOrg(tx: Tx, orgId: string) {
 }
 
 export async function balance(orgId: string, tx: Tx | typeof prisma = prisma): Promise<number> {
-  const last = await tx.creditEntry.findFirst({ where: { orgId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+  const last = await tx.creditEntry.findFirst({ where: { orgId }, orderBy: { seq: 'desc' } });
   return last?.balanceAfter ?? 0;
 }
 
@@ -186,7 +186,7 @@ billingRouter.get('/entitlement/public-key', ah(async (_req, res) => { res.type(
 billingRouter.get('/orgs/:orgId/credits', requireAuth, ah(async (req, res) => {
   const orgId = param(req, 'orgId');
   await requireMember(req, orgId);
-  const entries = await prisma.creditEntry.findMany({ where: { orgId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 200 });
+  const entries = await prisma.creditEntry.findMany({ where: { orgId }, orderBy: { seq: 'desc' }, take: 200 });
   res.json({ balance: await balance(orgId), entries });
 }));
 

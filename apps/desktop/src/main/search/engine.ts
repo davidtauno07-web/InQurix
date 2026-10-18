@@ -105,7 +105,7 @@ export function buildFtsQueries(p: ParsedQuery): { and?: string; or?: string } {
 }
 
 function filterSql(f: SearchFilters, alias = 'd'): { sql: string; params: (string | number)[] } {
-  const w: string[] = [`${alias}.status IN ('indexed','partial')`];
+  const w: string[] = [`${alias}.status IN ('indexed','partial')`, `${alias}.source_id IN (SELECT id FROM sources WHERE enabled = 1)`];
   const params: (string | number)[] = [];
   if (f.kinds?.length) { w.push(`${alias}.kind IN (${f.kinds.map(() => '?').join(',')})`); params.push(...f.kinds); }
   if (f.sourceIds?.length) { w.push(`${alias}.source_id IN (${f.sourceIds.map(() => '?').join(',')})`); params.push(...f.sourceIds); }

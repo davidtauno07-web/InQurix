@@ -70,7 +70,7 @@ export function registerIpc(ctx: IpcContext): void {
       (SELECT count(*) FROM documents d WHERE d.source_id = s.id AND d.status IN ('failed','unavailable')) failed,
       (SELECT group_concat(pattern, '\n') FROM exclusions x WHERE x.source_id = s.id) exclusions FROM sources s ORDER BY s.id`).all());
   h('sources:add', async (dir?: string) => {
-    let folder = dir;
+    let folder = process.env.INQURIX_E2E === '1' ? dir : undefined; // a renderer-supplied path is only trusted in the E2E harness
     if (!folder) {
       const owner = ctx.owner();
       const r = owner ? await dialog.showOpenDialog(owner, { properties: ['openDirectory'] }) : await dialog.showOpenDialog({ properties: ['openDirectory'] });

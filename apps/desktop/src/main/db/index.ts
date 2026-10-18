@@ -171,12 +171,13 @@ const MIGRATIONS: string[] = [
 ];
 
 export function openDatabase(file: string): DB {
-  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(file, { enableForeignKeyConstraints: true, timeout: 5000 });
   db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA temp_store = MEMORY;');
   migrate(db);
   if (file !== ':memory:') {
-    try { fs.chmodSync(file, 0o600); } catch { /* best effort on platforms without POSIX modes */ }
+    for (const f of [file, `${file}-wal`, `${file}-shm`]) try { if (fs.existsSync(f)) fs.chmodSync(f, 0o600); } catch { /* best effort on platforms without POSIX modes */ }
+    try { fs.chmodSync(path.dirname(file), 0o700); } catch { /* best effort */ }
   }
   return db;
 }

@@ -12,8 +12,8 @@ const MAX_DOCS = 5000;
 
 /** Loads structured records and the text of documents the checks read (records, emails, attachments). */
 export function loadFinanceData(db: DB, params: InvestigationParams = {}): { records: FinRecord[]; documents: FinDocument[] } {
-  const rows = db.prepare(`SELECT r.id, r.doc_id docId, r.data, d.name, d.attachment_name att, d.path, d.mtime_ms mtime FROM records r JOIN documents d ON d.id = r.doc_id WHERE d.status IN ('indexed','partial') ORDER BY r.id`).all() as { id: number; docId: number; data: string; name: string; att: string; path: string; mtime: number }[];
-  const docRows = db.prepare(`SELECT id, parent_id parentId, name, attachment_name att, path, mtime_ms mtime, metadata FROM documents WHERE status IN ('indexed','partial') AND (id IN (SELECT doc_id FROM records) OR kind = 'eml' OR parent_id IS NOT NULL) ORDER BY id LIMIT ${MAX_DOCS}`).all() as { id: number; parentId: number | null; name: string; att: string; path: string; mtime: number; metadata: string | null }[];
+  const rows = db.prepare(`SELECT r.id, r.doc_id docId, r.data, d.name, d.attachment_name att, d.path, d.mtime_ms mtime FROM records r JOIN documents d ON d.id = r.doc_id WHERE d.source_id IN (SELECT id FROM sources WHERE enabled = 1) AND d.status IN ('indexed','partial') ORDER BY r.id`).all() as { id: number; docId: number; data: string; name: string; att: string; path: string; mtime: number }[];
+  const docRows = db.prepare(`SELECT id, parent_id parentId, name, attachment_name att, path, mtime_ms mtime, metadata FROM documents WHERE source_id IN (SELECT id FROM sources WHERE enabled = 1) AND status IN ('indexed','partial') AND (id IN (SELECT doc_id FROM records) OR kind = 'eml' OR parent_id IS NOT NULL) ORDER BY id LIMIT ${MAX_DOCS}`).all() as { id: number; parentId: number | null; name: string; att: string; path: string; mtime: number; metadata: string | null }[];
   const segStmt = db.prepare('SELECT ordinal, text, location FROM segments WHERE doc_id = ? ORDER BY ordinal');
   const segs = new Map<number, { ordinal: number; text: string; location?: SegmentLocation }[]>();
   for (const d of docRows) segs.set(d.id, (segStmt.all(d.id) as { ordinal: number; text: string; location: string }[]).map((s) => ({ ordinal: s.ordinal, text: s.text, location: JSON.parse(s.location) as SegmentLocation })));
@@ -71,7 +71,7 @@ export function reviewFinding(db: DB, id: number, findingId: string, status: Rev
 
 const csvCell = (v: unknown) => {
   const s = String(v ?? '');
-  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s; // neutralise spreadsheet formula injection
+  const safe = /^\s*[=+\-@]|^[\t\r]/.test(s) ? `'${s}` : s; // neutralise spreadsheet formula injection
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
 

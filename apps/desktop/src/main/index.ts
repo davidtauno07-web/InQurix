@@ -2,7 +2,7 @@ import { app, BrowserWindow, globalShortcut, Menu, nativeImage, Notification, sc
 import { fork, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { now, openDatabase, type DB } from './db/index.js';
 import { SearchEngine } from './search/engine.js';
 import { createEmbedder, type Embedder } from './search/embed.js';
@@ -41,7 +41,11 @@ const secure = { preload: path.join(__dirname, '../preload/index.cjs'), contextI
 
 function hardenWindow(win: BrowserWindow) {
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) void shell.openExternal(url); return { action: 'deny' }; });
-  win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(process.env.ELECTRON_RENDERER_URL ?? 'file://')) e.preventDefault(); });
+  win.webContents.on('will-navigate', (e, url) => {
+    const dev = process.env.ELECTRON_RENDERER_URL;
+    const ok = dev ? url.startsWith(dev) : url.split('#')[0] === pathToFileURL(path.join(__dirname, '../renderer/index.html')).href;
+    if (!ok) e.preventDefault();
+  });
 }
 
 function createQuick() {
