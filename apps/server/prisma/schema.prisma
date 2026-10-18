@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  owner
+  admin
+  member
+  viewer
+}
+
+enum Plan {
+  free
+  pro
+  business
+}
+
+model User {
+  id              String       @id @default(cuid())
+  email           String       @unique
+  name            String
+  passwordHash    String?
+  emailVerifiedAt DateTime?
+  googleSub       String?      @unique
+  mfaSecret       String?
+  mfaEnabled      Boolean      @default(false)
+  recoveryCodes   String[]
+  failedLogins    Int          @default(0)
+  lockedUntil     DateTime?
+  createdAt       DateTime     @default(now())
+  sessions        Session[]
+  tokens          UserToken[]
+  memberships     Membership[]
+  grants          SourceGrant[]
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  mfaPassed  Boolean   @default(false)
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  @@index([userId])
+}
+
+model UserToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Organization {
+  id           String         @id @default(cuid())
+  name         String
+  personal     Boolean        @default(false)
+  plan         Plan           @default(free)
+  seats        Int            @default(1)
+  createdAt    DateTime       @default(now())
+  members      Membership[]
+  invitations  Invitation[]
+  sources      Source[]
+  ledger       CreditEntry[]
+  subscription Subscription?
+  audit        AuditLog[]
+}
+
+model Membership {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role
+  createdAt DateTime     @default(now())
+
+  @@unique([orgId, userId])
+}
+
+model Invitation {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email       String
+  role        Role
+  tokenHash   String       @unique
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime     @default(now())
+}
+
+model Source {
+  id          String        @id @default(cuid())
+  orgId       String
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  allMembers  Boolean       @default(false)
+  createdById String
+  createdAt   DateTime      @default(now())
+  grants      SourceGrant[]
+  documents   Document[]
+}
+
+model SourceGrant {
+  id        String   @id @default(cuid())
+  sourceId  String
+  source    Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  canExport Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([sourceId, userId])
+}
+
+model Document {
+  id           String    @id @default(cuid())
+  sourceId     String
+  source       Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  name         String
+  kind         String
+  mime         String
+  sha256       String
+  size         Int
+  content      Bytes
+  uploadedById String
+  createdAt    DateTime  @default(now())
+  segments     Segment[]
+
+  @@unique([sourceId, sha256])
+}
+
+model Segment {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  ord        Int
+  kind       String
+  location   Json
+  text       String
+
+  @@index([documentId])
+}
+
+model CreditEntry {
+  id             String       @id @default(cuid())
+  orgId          String
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId         String?
+  delta          Int
+  balanceAfter   Int
+  reason         String
+  operation      String?
+  idempotencyKey String?      @unique
+  createdAt      DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+}
+
+model Subscription {
+  id                     String       @id @default(cuid())
+  orgId                  String       @unique
+  org                    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider               String
+  providerCustomerId     String?
+  providerSubscriptionId String?      @unique
+  plan                   Plan
+  status                 String
+  seats                  Int          @default(1)
+  currentPeriodEnd       DateTime?
+  lastEventAt            DateTime?
+  updatedAt              DateTime     @updatedAt
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventId     String
+  type        String
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  error       String?
+
+  @@unique([provider, eventId])
+}
+
+model AuditLog {
+  id        String        @id @default(cuid())
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String?
+  action    String
+  target    String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime      @default(now())
+
+  @@index([orgId, createdAt])
+}
