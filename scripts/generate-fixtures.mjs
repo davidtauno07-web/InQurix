@@ -98,7 +98,7 @@ const SUPPLIER = 'Kavango Office Supplies (Pty) Ltd';
 const BUYER = 'Namib Coast Logistics CC';
 
 w('invoice-INV-1048.pdf', await pdf([
-  '# TAX INVOICE', `${SUPPLIER}`, 'VAT No: 4012345678', '12 Independence Avenue, Windhoek', '',
+  '# TAX INVOICE', `${SUPPLIER}`, 'VAT No: 4012345678', '12 Independence Avenue, Windhoek', 'Email: accounts@kavango-office-supplies.com', '',
   'Invoice No: INV-1048', 'Invoice Date: 14/03/2026', 'Purchase Order: PO-7731', `Bill To: ${BUYER}`, '',
   'Description            Qty   Unit Price     Amount',
   'A4 Copy Paper (box)    40    N$ 210.00      N$ 8,400.00',
