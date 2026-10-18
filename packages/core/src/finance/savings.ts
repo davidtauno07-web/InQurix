@@ -1,4 +1,4 @@
-import { compareInvoice, type LineDiscrepancy } from './compare.js';
+import { compareInvoice, findCounterparts, type LineDiscrepancy } from './compare.js';
 import { findDuplicateInvoices, findDuplicatePayments } from './duplicates.js';
 import type { FinDocument, Finding, FinRecord } from './types.js';
 import { blankFinding, label, money, round2, sameItem } from './util.js';
@@ -33,6 +33,15 @@ export function findCostSavings(records: FinRecord[], documents: FinDocument[] =
     const undelivered = discrepancies.filter((x) => x.kind === 'quantity_delivered');
     const calcs: Finding['calculations'] = [];
     const notes: string[] = [];
+    const po = findCounterparts(inv, records).po;
+    for (const [k, d] of [...priceByItem]) {
+      if (d.againstType !== 'quotation' || !po) continue;
+      const poLine = po.lineItems.find((l) => sameItem(l.description, d.item) >= 0.8);
+      if (poLine?.unitPrice !== undefined && Math.abs(poLine.unitPrice - d.invoiced) < 0.005) {
+        priceByItem.delete(k);
+        notes.push(`${d.item}: the invoiced price differs from the quotation but matches the purchase order, so it is not counted.`);
+      }
+    }
     for (const [, d] of priceByItem) {
       const refName = d.againstType === 'contract' ? `contract price (${'docName' in d.against ? d.against.docName : ''})` : d.againstType === 'purchase_order' ? 'purchase-order price' : 'quoted price';
       calcs.push({ description: `${d.item}: invoiced at ${money(d.invoiced, d.currency)} vs ${refName} ${money(d.reference, d.currency)}`, expression: `(${d.invoiced} − ${d.reference}) × ${d.quantity}`, result: round2((d.invoiced - d.reference) * d.quantity), currency: d.currency });

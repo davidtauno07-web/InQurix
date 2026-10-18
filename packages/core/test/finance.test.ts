@@ -99,7 +99,10 @@ describe('invoice comparison and cost savings', () => {
     expect(desc).toMatch(/contract price/);
     expect(desc).not.toMatch(/quoted price.*Paper|Paper.*quoted price/i);
     // paper 40 × (210 − 200) = 400, toner 5 × (650 − 640)? no: toner matches PO 650 → quote 640 only counts if no PO/contract
-    expect(over[0].amount!.value).toBeGreaterThan(0);
+    // paper (210 − 200) × 40 = 400 vs contract; delivery 800 − 700 = 100 vs PO; 2 undelivered boxes × 200 = 400.
+    // Toner matches the PO price, so the lower quotation is not counted.
+    expect(over[0].amount!.value).toBe(900);
+    expect(over[0].assumptions.join(' ')).toMatch(/matches the purchase order/);
   });
 });
 
