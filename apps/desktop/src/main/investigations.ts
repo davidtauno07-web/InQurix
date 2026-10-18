@@ -88,7 +88,7 @@ export function exportInvestigation(db: DB, id: number, format: 'md' | 'json' | 
   }
   const L: string[] = [`# ${inv.title}`, '', `Run ${inv.completed_at ?? inv.created_at} · ${r.findings.length} findings`, '', `**Objective:** ${r.objective}`, '', ...r.notes.map((n) => `- ${n}`), ''];
   if (r.totals) L.push(`**Totals (overlaps counted once):** documented overcharge ${r.totals.documentedOvercharge}, potential saving ${r.totals.potentialSaving}, amount at risk ${r.totals.amountAtRisk} ${r.totals.currency ?? ''}`, '');
-  L.push('> Findings are evidence for review, not conclusions. Indicators are not proof of fraud. Absence of a record means it was not found in the authorised, indexed folders.', '');
+  L.push('> Findings are evidence for review, not conclusions. Indicators are not proof of wrongdoing and must be verified. Absence of a record means it was not found in the authorised, indexed folders.', '');
   for (const f of r.findings) {
     L.push(`## ${f.label}: ${f.title}`, '', f.summary, '', `Classification: ${f.classification.replace(/_/g, ' ')} · Evidence strength: ${f.strength}${f.grade ? ` · Grade: ${f.grade}` : ''} · Review: ${review(f)}`, '');
     if (f.comparisons.length) {

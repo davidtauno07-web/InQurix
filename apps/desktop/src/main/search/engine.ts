@@ -285,6 +285,10 @@ export class SearchEngine {
     for (const [docId, d] of ranked) {
       const doc = docs.get(docId);
       if (!doc) continue;
+      if (p.phrases.length) {
+        const hay = [`${doc.name} ${doc.title ?? ''}`, ...d.segs.map((x) => x.text)].map(foldForSearch);
+        if (!p.phrases.every((ph) => { const f = foldForSearch(ph); return hay.some((h) => h.includes(f)); })) continue;
+      }
       const reasons = new Set<string>();
       for (const s of d.segs) for (const r of s.reasons) reasons.add(r);
       for (const r of docBoost.get(docId)?.reasons ?? []) reasons.add(r);

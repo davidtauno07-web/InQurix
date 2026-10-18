@@ -108,6 +108,8 @@ describe('search', () => {
     fs.utimesSync(f, new Date(), new Date(Date.now() + 5000));
     await indexFile(db, source, f);
     expect((await engine.search({ query: 'kudu feed' })).results.map((r) => r.name)).not.toContain('notes-new.txt');
+    expect((await engine.search({ query: '"Kudu feed order placed"' })).results.map((r) => r.name)).not.toContain('notes-new.txt');
+    expect((await engine.search({ query: '"Springbok fencing quote"' })).results[0]?.name).toBe('notes-new.txt');
     expect((await engine.search({ query: 'springbok fencing' })).results[0]?.name).toBe('notes-new.txt');
   });
 });

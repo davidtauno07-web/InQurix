@@ -33,7 +33,8 @@ export function Workspace({ route }: { route: string }) {
   const [invType, setInvType] = useState<string | undefined>(new URLSearchParams(qs ?? '').get('type') ?? undefined);
   const idx = useIndexing();
   const [shortcutErr, setShortcutErr] = useState<string | null>(null);
-  useEffect(() => { setPage((base as Page) || 'search'); }, [base]);
+  useEffect(() => { setPage((base as Page) || 'search'); }, [route, base]);
+  const go = (p: Page) => { setPage(p); if (window.location.hash !== `#workspace/${p}`) window.location.hash = `workspace/${p}`; };
   useEffect(() => window.inqurix.on('shortcut:error', (m) => setShortcutErr(String(m))), []);
 
   if (page === 'onboarding') return <Onboarding done={() => setPage('search')} idx={idx} />;
@@ -42,12 +43,12 @@ export function Workspace({ route }: { route: string }) {
     <div className="ws">
       <aside className="ws-nav">
         <div className="brand"><img src={logo} alt="" /><span>InQurix</span></div>
-        <nav aria-label="Main">{nav.map(([p, l]) => <button key={p} type="button" className={page === p ? 'active' : ''} aria-current={page === p ? 'page' : undefined} onClick={() => { setPage(p); if (p !== 'investigations') setInvType(undefined); }}>{l}</button>)}</nav>
+        <nav aria-label="Main">{nav.map(([p, l]) => <button key={p} type="button" className={page === p ? 'active' : ''} aria-current={page === p ? 'page' : undefined} onClick={() => { go(p); if (p !== 'investigations') setInvType(undefined); }}>{l}</button>)}</nav>
         <IndexBadge {...idx} />
       </aside>
       <main className="ws-main">
-        {shortcutErr && <div className="banner warn" role="alert">{shortcutErr} <button type="button" onClick={() => setPage('settings')}>Change</button></div>}
-        {page === 'search' && <SearchPage initialQ={initialQ} investigate={(t) => { setInvType(t); setPage('investigations'); }} />}
+        {shortcutErr && <div className="banner warn" role="alert">{shortcutErr} <button type="button" onClick={() => go('settings')}>Change</button></div>}
+        {page === 'search' && <SearchPage initialQ={initialQ} investigate={(t) => { setInvType(t); go('investigations'); }} />}
         {page === 'investigations' && <Investigations initialType={invType} />}
         {page === 'library' && <Library />}
         {page === 'sources' && <Sources idx={idx} />}
@@ -120,7 +121,7 @@ function DocPanel({ result, query }: { result: Result; query: string }) {
   useEffect(() => {
     void inv<DocDetail>('doc:get', result.docId).then(setD);
     void inv<{ id: number; name: string; types: string }[]>('doc:related', result.docId).then(setRelated);
-  }, [result.docId]);
+  }, [result]);
   useEffect(() => { if (focusSeg) document.getElementById(`seg-${focusSeg}`)?.scrollIntoView({ block: 'center' }); }, [focusSeg, d]);
   const act = useCallback(async (ch: 'doc:open' | 'doc:reveal') => { const r = await inv<{ ok: boolean; error?: string }>(ch, result.docId, query); setErr(r.ok ? null : r.error ?? 'Failed'); }, [result.docId, query]);
   if (!d) return <section className="doc-panel">Loading…</section>;
