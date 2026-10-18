@@ -72,3 +72,28 @@ li > .hint, td .hint { display: inline; }
 .settings .setting { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); max-width: 760px; }
 .settings label.setting { justify-content: flex-start; }
 .onboarding { max-width: 640px; margin: 60px auto; text-align: center; padding: 20px; } .ob-logo { width: 96px; height: 96px; border-radius: 16px; } .ob-sources { text-align: left; } .onboarding .row { justify-content: center; margin-top: 16px; }
+.investigations { padding: 0 4px; }
+.inv-scope { margin: 8px 0; }
+.inv-types { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.inv-types li { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.inv-types li span { color: var(--muted); font-size: 13px; flex: 1; }
+.inv-types li.suggested { border-color: var(--accent); }
+.inv-list ul { list-style: none; padding: 0; }
+.inv-list { min-width: 240px; max-width: 300px; }
+.inv-totals { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+.inv-totals div { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; }
+.inv-totals span { font-size: 12px; color: var(--muted); }
+.findings { padding-left: 18px; }
+.finding { margin: 10px 0; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.finding.st-dismissed { opacity: .6; }
+.f-head { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; text-align: left; border: 0; padding: 4px 0; background: none; }
+.f-title { font-weight: 600; }
+.badge { font-size: 11px; border-radius: 10px; padding: 1px 8px; background: var(--accent-soft); }
+.badge.c-potential_discrepancy, .badge.c-unverified_indicator { background: var(--warn-bg); color: var(--warn); }
+.badge.c-missing_evidence { background: var(--line); }
+.tbl.cmp td { vertical-align: top; }
+.tbl.cmp tr.o-different td:last-child { color: var(--danger); font-weight: 600; }
+.tbl.cmp tr.o-same td:last-child { color: var(--ok); }
+.f-body h4 { margin: 10px 0 4px; }
+.f-note { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.excerpt { display: block; color: var(--muted); font-size: 12px; white-space: pre-wrap; }

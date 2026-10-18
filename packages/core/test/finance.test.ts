@@ -12,8 +12,8 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'inqurix-fin-'));
 const TESSDATA = ['/usr/share/tesseract-ocr/5/tessdata', '/usr/share/tesseract-ocr/4.00/tessdata'].find((d) => fs.existsSync(path.join(d, 'eng.traineddata')));
-let records: FinRecord[] = [];
-let documents: FinDocument[] = [];
+const records: FinRecord[] = [];
+const documents: FinDocument[] = [];
 
 beforeAll(async () => {
   execFileSync(process.execPath, [path.join(root, 'scripts/generate-fixtures.mjs'), dir]);

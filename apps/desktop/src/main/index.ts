@@ -1,9 +1,9 @@
-import { app, BrowserWindow, globalShortcut, Menu, nativeImage, screen, shell, Tray } from 'electron';
+import { app, BrowserWindow, globalShortcut, Menu, nativeImage, Notification, screen, shell, Tray } from 'electron';
 import { fork, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { openDatabase } from './db/index.js';
+import { now, openDatabase, type DB } from './db/index.js';
 import { SearchEngine } from './search/engine.js';
 import { createEmbedder, type Embedder } from './search/embed.js';
 import { SettingsStore, type Settings } from './settings.js';
@@ -127,6 +127,19 @@ app.on('before-quit', () => { quitting = true; });
 app.on('will-quit', () => { globalShortcut.unregisterAll(); worker?.send({ type: 'shutdown' }); });
 app.on('activate', () => openWorkspace());
 
+/** Notifies once per reminder when it is due within a day; only reminders the user created. */
+function checkReminders(db: DB) {
+  if (!settings.get().reminders || !Notification.isSupported()) return;
+  const soon = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const due = db.prepare('SELECT id, title, due_date, date_basis FROM reminders WHERE dismissed_at IS NULL AND notified_at IS NULL AND due_date <= ?').all(soon) as { id: number; title: string; due_date: string; date_basis: string }[];
+  for (const r of due) {
+    const n = new Notification({ title: `InQurix reminder: ${r.due_date}`, body: `${r.title}${r.date_basis === 'calculated' ? ' (calculated date — check the document)' : ''}` });
+    n.on('click', () => openWorkspace('investigations'));
+    n.show();
+    db.prepare('UPDATE reminders SET notified_at = ? WHERE id = ?').run(now(), r.id);
+  }
+}
+
 app.whenReady().then(async () => {
   if (process.platform === 'darwin') app.dock?.setIcon(icon());
   Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]) : null);
@@ -148,6 +161,8 @@ app.whenReady().then(async () => {
   });
   startWorker();
   void loadEmbedder();
+  checkReminders(db);
+  setInterval(() => checkReminders(db), 3_600_000).unref();
   tray = new Tray(icon().resize({ width: 18, height: 18 }));
   tray.setToolTip('InQurix');
   tray.on('click', showQuick);

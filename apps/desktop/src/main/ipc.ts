@@ -5,6 +5,8 @@ import { now, type DB } from './db/index.js';
 import type { SearchEngine, SearchRequest } from './search/engine.js';
 import type { Settings, SettingsStore } from './settings.js';
 import type { WorkerIn } from './indexer/worker.js';
+import { INVESTIGATIONS, detectInvestigationIntent } from '@inqurix/core';
+import { exportInvestigation, getInvestigation, isInvestigationType, reviewFinding, runAndStore, type InvestigationParams, type ReviewStatus } from './investigations.js';
 
 export interface IpcContext {
   db: DB;
@@ -131,5 +133,35 @@ export function registerIpc(ctx: IpcContext): void {
 
   h('quick:hide', () => { ctx.hideQuick(); return true; });
   h('workspace:open', (route?: string) => { ctx.openWorkspace(route); return true; });
+  h('investigations:types', () => Object.entries(INVESTIGATIONS).map(([type, v]) => ({ type, ...v })));
+  h('investigations:suggest', (q: string) => (typeof q === 'string' ? detectInvestigationIntent(q.slice(0, 500)) ?? null : null));
+  h('investigations:run', (type: string, params?: InvestigationParams) => {
+    if (!isInvestigationType(type)) throw new Error('Unknown investigation type');
+    const p: InvestigationParams = { supplier: typeof params?.supplier === 'string' ? params.supplier.slice(0, 200) : undefined, docIds: Array.isArray(params?.docIds) ? params.docIds.filter(Number.isInteger).slice(0, 1000) : undefined };
+    return runAndStore(db, type, p);
+  });
+  h('investigations:list', () => db.prepare("SELECT id, type, title, status, created_at, completed_at, error, json_array_length(json_extract(result, '$.findings')) findings FROM investigations ORDER BY id DESC LIMIT 200").all());
+  h('investigations:get', (id: number) => getInvestigation(db, id) ?? null);
+  h('investigations:delete', (id: number) => { db.prepare('DELETE FROM investigations WHERE id = ?').run(id); return true; });
+  h('investigations:review', (id: number, findingId: string, status: ReviewStatus, note?: string) => reviewFinding(db, id, String(findingId), status, typeof note === 'string' ? note : undefined));
+  h('investigations:export', async (id: number, format: 'md' | 'json' | 'csv') => {
+    if (!['md', 'json', 'csv'].includes(format)) return { ok: false, error: 'Unsupported format' };
+    const body = exportInvestigation(db, id, format);
+    if (body === undefined) return { ok: false, error: 'Investigation not found' };
+    const owner = ctx.owner();
+    const opts = { defaultPath: `inqurix-investigation-${id}.${format}`, filters: [{ name: format.toUpperCase(), extensions: [format] }] };
+    const res = owner ? await dialog.showSaveDialog(owner, opts) : await dialog.showSaveDialog(opts);
+    if (res.canceled || !res.filePath) return { ok: false, canceled: true };
+    fs.writeFileSync(res.filePath, body, { mode: 0o600 });
+    return { ok: true, path: res.filePath };
+  });
+  h('reminders:list', () => db.prepare('SELECT r.*, d.name doc_name FROM reminders r LEFT JOIN documents d ON d.id = r.doc_id WHERE r.dismissed_at IS NULL ORDER BY r.due_date').all());
+  h('reminders:add', (r: { docId?: number; title: string; dueDate: string; basis: 'explicit' | 'calculated'; evidence?: string }) => {
+    if (!r || typeof r.title !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(String(r.dueDate))) throw new Error('Invalid reminder');
+    const exists = db.prepare('SELECT id FROM reminders WHERE title = ? AND due_date = ? AND dismissed_at IS NULL').get(r.title.slice(0, 300), r.dueDate) as { id: number } | undefined;
+    if (exists) return exists.id;
+    return Number(db.prepare('INSERT INTO reminders (doc_id, title, due_date, date_basis, evidence, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(Number.isInteger(r.docId) ? (r.docId as number) : null, r.title.slice(0, 300), r.dueDate, r.basis === 'calculated' ? 'calculated' : 'explicit', r.evidence?.slice(0, 2000) ?? null, now()).lastInsertRowid);
+  });
+  h('reminders:dismiss', (id: number) => { db.prepare('UPDATE reminders SET dismissed_at = ? WHERE id = ?').run(now(), id); return true; });
   h('app:info', () => ({ version: app.getVersion(), platform: process.platform, userData: app.getPath('userData') }));
 }

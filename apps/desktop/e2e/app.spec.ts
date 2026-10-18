@@ -100,6 +100,37 @@ test('workspace search shows evidence, explanation, extracted fields and related
   await ws.screenshot({ path: path.join(shots, '03-workspace-evidence.png') });
 });
 
+test('investigations: suggested from search, run on demand, evidence and review', async () => {
+  await ws.getByRole('textbox', { name: 'Search' }).fill('did we pay Kavango twice');
+  const banner = ws.getByRole('status').filter({ hasText: 'analysis question' });
+  await expect(banner).toContainText('Duplicate payments');
+  await banner.getByRole('button', { name: 'Open investigation' }).click();
+  await expect(ws.getByRole('heading', { name: 'Investigations', level: 1 })).toBeVisible();
+  const card = ws.locator('.inv-types li.suggested');
+  await expect(card).toContainText('Duplicate payments');
+  await card.getByRole('button', { name: 'Run' }).click();
+  const view = ws.getByRole('region', { name: 'Investigation', exact: true });
+  await expect(view).toContainText('Repeated payments associated with the same invoice');
+  await expect(view).toContainText('Amount requiring verification');
+  await view.locator('.f-head').first().click();
+  await expect(view).toContainText('payments-2026.xlsx');
+  await expect(view).toContainText('different accounts');
+  await view.getByRole('button', { name: 'Confirmed issue' }).first().click();
+  await expect(view).toContainText('confirmed');
+  await ws.screenshot({ path: path.join(shots, '04-investigation-duplicate-payments.png') });
+
+  await ws.locator('.inv-types li').filter({ hasText: 'Cost savings' }).getByRole('button', { name: 'Run' }).click();
+  await expect(view).toContainText('Documented overcharge');
+  await view.locator('.f-head').first().click();
+  await expect(view).toContainText('contract price');
+  await ws.screenshot({ path: path.join(shots, '05-investigation-cost-savings.png') });
+
+  await ws.locator('.inv-types li').filter({ hasText: 'Payment-redirection indicators' }).getByRole('button', { name: 'Run' }).click();
+  await expect(view).toContainText('Possible impersonation indicator');
+  await expect(view).not.toContainText(/\bis fraud\b/i);
+  await ws.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Search' }).click();
+});
+
 test('new and deleted files are reflected by the watcher', async () => {
   const f = path.join(docs, 'watcher-note.txt');
   fs.writeFileSync(f, 'Oryx fencing contract signed with Gobabis Agri Supplies');

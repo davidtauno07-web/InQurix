@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./finance-types": {
+      "types": "./dist/finance/types.d.ts",
+      "default": "./dist/finance/types.js"
     }
   },
   "scripts": {

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Snippet, describeLocation, type Loc } from './Snippet';
 import { useSearch, type Result } from './QuickSearch';
 import logo from './assets/logo.png';
+import { Investigations } from './Investigations';
 
 const inv = window.inqurix.invoke;
 const isMac = window.inqurix.platform === 'darwin';
-type Page = 'search' | 'sources' | 'library' | 'settings' | 'onboarding';
+type Page = 'search' | 'investigations' | 'sources' | 'library' | 'settings' | 'onboarding';
 interface Source { id: number; path: string; name: string; enabled: number; include_hidden: number; docs: number; failed: number; exclusions: string | null; last_scan_at?: string | null }
 interface Progress { sourceId: number; phase: string; discovered: number; processed: number; indexed: number; failed: number; current?: string }
 interface IdxState { paused: boolean; busy: boolean; queue: number }
@@ -29,23 +30,25 @@ export function Workspace({ route }: { route: string }) {
   const [base, qs] = route.split('?');
   const [page, setPage] = useState<Page>((base as Page) || 'search');
   const initialQ = new URLSearchParams(qs ?? '').get('q') ?? '';
+  const [invType, setInvType] = useState<string | undefined>(new URLSearchParams(qs ?? '').get('type') ?? undefined);
   const idx = useIndexing();
   const [shortcutErr, setShortcutErr] = useState<string | null>(null);
   useEffect(() => { setPage((base as Page) || 'search'); }, [base]);
   useEffect(() => window.inqurix.on('shortcut:error', (m) => setShortcutErr(String(m))), []);
 
   if (page === 'onboarding') return <Onboarding done={() => setPage('search')} idx={idx} />;
-  const nav: [Page, string][] = [['search', 'Search'], ['library', 'History & saved'], ['sources', 'Sources & indexing'], ['settings', 'Settings']];
+  const nav: [Page, string][] = [['search', 'Search'], ['investigations', 'Investigations'], ['library', 'History & saved'], ['sources', 'Sources & indexing'], ['settings', 'Settings']];
   return (
     <div className="ws">
       <aside className="ws-nav">
         <div className="brand"><img src={logo} alt="" /><span>InQurix</span></div>
-        <nav aria-label="Main">{nav.map(([p, l]) => <button key={p} type="button" className={page === p ? 'active' : ''} aria-current={page === p ? 'page' : undefined} onClick={() => setPage(p)}>{l}</button>)}</nav>
+        <nav aria-label="Main">{nav.map(([p, l]) => <button key={p} type="button" className={page === p ? 'active' : ''} aria-current={page === p ? 'page' : undefined} onClick={() => { setPage(p); if (p !== 'investigations') setInvType(undefined); }}>{l}</button>)}</nav>
         <IndexBadge {...idx} />
       </aside>
       <main className="ws-main">
         {shortcutErr && <div className="banner warn" role="alert">{shortcutErr} <button type="button" onClick={() => setPage('settings')}>Change</button></div>}
-        {page === 'search' && <SearchPage initialQ={initialQ} />}
+        {page === 'search' && <SearchPage initialQ={initialQ} investigate={(t) => { setInvType(t); setPage('investigations'); }} />}
+        {page === 'investigations' && <Investigations initialType={invType} />}
         {page === 'library' && <Library />}
         {page === 'sources' && <Sources idx={idx} />}
         {page === 'settings' && <SettingsPage />}
@@ -64,8 +67,18 @@ function IndexBadge({ progress, state }: ReturnType<typeof useIndexing>) {
   );
 }
 
-function SearchPage({ initialQ }: { initialQ: string }) {
+function SearchPage({ initialQ, investigate }: { initialQ: string; investigate: (type: string) => void }) {
   const { query, setQuery, resp, busy } = useSearch();
+  const [suggest, setSuggest] = useState<{ type: string; title: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    const t = setTimeout(async () => {
+      const type = query.trim() ? await inv<string | null>('investigations:suggest', query) : null;
+      const types = type ? await inv<{ type: string; title: string }[]>('investigations:types') : [];
+      if (live) setSuggest(type ? types.find((x) => x.type === type) ?? null : null);
+    }, 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [query]);
   const [selected, setSelected] = useState<Result | null>(null);
   const [saved, setSaved] = useState(false);
   useEffect(() => { if (initialQ) setQuery(initialQ); }, [initialQ, setQuery]);
@@ -77,6 +90,7 @@ function SearchPage({ initialQ }: { initialQ: string }) {
         <button type="button" disabled={!query.trim() || saved} onClick={async () => { await inv('saved:add', query.trim(), query.trim()); setSaved(true); }}>{saved ? 'Saved' : 'Save search'}</button>
       </div>
       <p className="hint">Filters: <code>type:pdf</code> <code>after:2026-01-01</code> <code>before:2026-06-30</code> <code>in:Finance</code> · quotes for exact phrases{busy ? ' · searching…' : resp ? ` · ${resp.results.length} results in ${resp.tookMs} ms` : ''}</p>
+      {suggest && <div className="banner info" role="status">This looks like an analysis question. Search results below show matching documents; the <strong>{suggest.title}</strong> investigation compares records across all of them. <button type="button" className="primary" onClick={() => investigate(suggest.type)}>Open investigation</button></div>}
       <div className="split">
         <ul className="results" aria-label="Results">
           {resp?.results.map((r) => (
