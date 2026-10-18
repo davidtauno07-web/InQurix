@@ -152,8 +152,11 @@ export function registerIpc(ctx: IpcContext): void {
     const opts = { defaultPath: `inqurix-investigation-${id}.${format}`, filters: [{ name: format.toUpperCase(), extensions: [format] }] };
     const res = owner ? await dialog.showSaveDialog(owner, opts) : await dialog.showSaveDialog(opts);
     if (res.canceled || !res.filePath) return { ok: false, canceled: true };
-    fs.writeFileSync(res.filePath, body, { mode: 0o600 });
-    return { ok: true, path: res.filePath };
+    let file = res.filePath;
+    while (file.toLowerCase().endsWith(`.${format}.${format}`)) file = file.slice(0, -(format.length + 1));
+    if (!path.extname(file)) file += `.${format}`;
+    fs.writeFileSync(file, body, { mode: 0o600 });
+    return { ok: true, path: file };
   });
   h('reminders:list', () => db.prepare('SELECT r.*, d.name doc_name FROM reminders r LEFT JOIN documents d ON d.id = r.doc_id WHERE r.dismissed_at IS NULL ORDER BY r.due_date').all());
   h('reminders:add', (r: { docId?: number; title: string; dueDate: string; basis: 'explicit' | 'calculated'; evidence?: string }) => {

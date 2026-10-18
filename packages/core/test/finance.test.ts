@@ -122,9 +122,26 @@ describe('bank details and scam indicators', () => {
     expect(r.findings.every((f) => f.classification === 'unverified_indicator')).toBe(true);
     expect(JSON.stringify(r.findings)).not.toMatch(/\bis fraud\b|\b\d+% (?:chance|probability)/i);
   });
+  it('recognises a look-alike of the supplier name even when the real domain is not indexed', () => {
+    const real = /kavango-office-supplies\.com/;
+    const docs = documents.filter((d) => d.email || !d.segments.some((x) => real.test(x.text)));
+    const recs = records.filter((r) => docs.some((d) => d.docId === r.docId)).map((r) => ({ ...r, contact: undefined }));
+    const email = runInvestigation('scam_indicators', { records: recs, documents: docs }).findings.find((f) => f.title.includes('URGENT'))!;
+    expect(email.kind).toBe('possible_impersonation');
+    expect(email.summary).toMatch(/imitates the supplier name "Kavango Office Supplies/);
+    expect(JSON.stringify(email)).not.toMatch(/fraud/i);
+  });
   it('does not flag an urgent email that does not change payment details', () => {
     const doc: FinDocument = { docId: 99, name: 'urgent.eml', segments: [{ ordinal: 0, text: 'URGENT: please approve the leave request today. Confidential.' }], email: { from: 'hr@kavango-office-supp1ies.com' } };
     expect(runInvestigation('scam_indicators', { records, documents: [doc] }).findings).toHaveLength(0);
+  });
+});
+
+describe('payment currency', () => {
+  it('takes the currency of the referenced invoice when the payment record has none', () => {
+    const inv = records.find((r) => r.docType === 'invoice' && r.currency)!;
+    const f = findDuplicatePayments(records)[0];
+    expect(f.amount?.currency).toBe(inv.currency);
   });
 });
 

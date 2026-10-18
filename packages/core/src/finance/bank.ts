@@ -81,6 +81,7 @@ const SECRECY = [/\bconfidential\b/i, /do not (?:call|phone|contact)/i, /\bkeep 
 const CHANGE = [/\b(?:new|changed?|updated?)\s+(?:bank(?:ing)?\s+)?(?:details|account)/i, /\bbank(?:ing)? details (?:have )?changed\b/i, /\bplease (?:use|pay (?:in)?to) (?:the|our) new\b/i];
 
 const deleet = (s: string) => s.toLowerCase().replace(/1/g, 'l').replace(/0/g, 'o').replace(/rn/g, 'm').replace(/vv/g, 'w').replace(/5/g, 's');
+const supplierKey = (name: string) => name.toLowerCase().replace(/\((pty)\)|\b(ltd|limited|cc|inc|llc|pty)\b\.?/g, '').replace(/[^a-z]/g, '');
 const domainOf = (email?: string) => email?.toLowerCase().match(/@([a-z0-9.-]+)/)?.[1];
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 
@@ -126,6 +127,13 @@ export function findScamIndicators(records: FinRecord[], documents: FinDocument[
     if (sender && !knownDomains.has(sender)) {
       lookalike = [...knownDomains.keys()].find((k) => k !== sender && (deleet(k) === deleet(sender) || (deleet(sender).replace(/[^a-z]/g, '') === deleet(k).replace(/[^a-z]/g, ''))));
       if (lookalike) indicators.push(`Sender domain ${sender} resembles ${lookalike}, which appears in other supplier documents`);
+      if (!lookalike) {
+        const label = sender.split('.')[0];
+        const key = deleet(label).replace(/[^a-z]/g, '');
+        const named = deleet(label) !== label ? records.find((r) => r.supplier && supplierKey(r.supplier) === key) : undefined;
+        if (named) indicators.push(`Sender domain ${sender} imitates the supplier name "${named.supplier}" with substituted characters`);
+        if (named) lookalike = named.supplier;
+      }
     }
     const bank = bankFindings.find((b) => family.some((d) => b.docIds.includes(d.docId)));
     if (bank) indicators.push('The account in this message differs from the account on earlier documents');

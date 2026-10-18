@@ -122,7 +122,10 @@ export function findDuplicateInvoices(records: FinRecord[]): Finding[] {
 
 /** Duplicate-payment investigation: a repeated amount alone is never enough. */
 export function findDuplicatePayments(records: FinRecord[]): Finding[] {
-  const pays = records.filter((r) => PAYMENT_TYPES.has(r.docType) && r.direction !== 'in' && r.total !== undefined);
+  const invoiceCurrency = new Map(records.filter((r) => r.docType === 'invoice' && r.numberNormalized && r.currency).map((r) => [r.numberNormalized!, r.currency!]));
+  const pays = records
+    .filter((r) => PAYMENT_TYPES.has(r.docType) && r.direction !== 'in' && r.total !== undefined)
+    .map((r) => (!r.currency && r.invoiceReference && invoiceCurrency.has(r.invoiceReference) ? { ...r, currency: invoiceCurrency.get(r.invoiceReference) } : r));
   const incoming = records.filter((r) => PAYMENT_TYPES.has(r.docType) && r.direction === 'in');
   const bankTx = records.filter((r) => r.docType === 'bank_statement');
   const coverage = bankTx.map((r) => r.date).filter(Boolean).sort() as string[];
