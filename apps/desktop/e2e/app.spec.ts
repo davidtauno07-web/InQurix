@@ -44,7 +44,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await app?.close(); });
 
 test('onboarding: authorise a folder and index it', async () => {
-  await expect(ws.getByRole('heading', { name: /Find information without remembering/ })).toBeVisible();
+  await expect(ws.getByRole('heading', { name: /The Local Intelligence and Analysis Engine/ })).toBeVisible();
   await ws.getByRole('button', { name: 'Get started' }).click();
   await expect(ws.getByRole('heading', { name: 'Choose folders to search' })).toBeVisible();
   await ws.evaluate((d) => window.inqurix.invoke('sources:add', d), docs);

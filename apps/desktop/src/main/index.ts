@@ -168,7 +168,7 @@ app.whenReady().then(async () => {
   checkReminders(db);
   setInterval(() => checkReminders(db), 3_600_000).unref();
   tray = new Tray(icon().resize({ width: 18, height: 18 }));
-  tray.setToolTip('InQurix');
+  tray.setToolTip('InQurix — The Local Intelligence and Analysis Engine');
   tray.on('click', showQuick);
   updateTray();
   createQuick();

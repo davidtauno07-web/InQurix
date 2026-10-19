@@ -1,5 +1,7 @@
 # InQurix user guide
 
+InQurix is The Local Intelligence and Analysis Engine: Discover. Connect. Analyze. Understand. It works on the folders you authorise, on your own computer.
+
 ## First start
 
 1. Click **Get started** and choose the folders InQurix may read (for example *Documents\Finance*). Nothing else on the computer is read.

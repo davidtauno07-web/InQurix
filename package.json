@@ -2,7 +2,7 @@
   "name": "inqurix",
   "private": true,
   "version": "0.1.0",
-  "description": "InQurix - intelligent document discovery, evidence retrieval and business intelligence",
+  "description": "InQurix — The Local Intelligence and Analysis Engine. Discover. Connect. Analyze. Understand.",
   "type": "module",
   "workspaces": [
     "packages/core",

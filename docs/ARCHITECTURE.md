@@ -1,5 +1,7 @@
 # Architecture
 
+How InQurix, The Local Intelligence and Analysis Engine, is built. Processing is local-first: indexing, search and investigations run on the user's device, and the optional server adds company workspaces, accounts and billing.
+
 ```
 packages/core   shared, framework-free TypeScript
   identify.ts       content-based file type detection; refuses executables and macro files

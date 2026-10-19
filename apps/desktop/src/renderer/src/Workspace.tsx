@@ -241,7 +241,7 @@ function SettingsPage() {
       <label className="setting"><span><strong>Full check for changes every</strong><span className="hint">File changes are picked up immediately; this catches anything missed while closed.</span></span>
         <select value={s.reconcileMinutes} onChange={(e) => void upd({ reconcileMinutes: Number(e.target.value) })}>{[15, 30, 60, 240, 1440].map((m) => <option key={m} value={m}>{m < 60 ? `${m} minutes` : `${m / 60} hour${m > 60 ? 's' : ''}`}</option>)}</select>
       </label>
-      {info && <p className="hint">Version {info.version} · Index location: {info.userData}</p>}
+      <section aria-label="About InQurix"><h2>About InQurix</h2><p><strong>The Local Intelligence and Analysis Engine</strong>. Discover. Connect. Analyze. Understand.</p>{info && <p className="hint">Version {info.version} · Index location: {info.userData}</p>}</section>
     </div>
   );
 }
@@ -256,7 +256,7 @@ function Onboarding({ done, idx }: { done: () => void; idx: ReturnType<typeof us
   return (
     <div className="onboarding">
       <img src={logo} alt="InQurix" className="ob-logo" />
-      {step === 0 && <><h1>Find information without remembering where you saved it</h1><p>InQurix reads the documents in folders you choose and lets you search inside them: words, amounts, invoice numbers, people and meaning. Everything is processed on this computer.</p><button type="button" className="primary" onClick={() => setStep(1)}>Get started</button></>}
+      {step === 0 && <><h1>InQurix — The Local Intelligence and Analysis Engine</h1><p className="tagline">Discover. Connect. Analyze. Understand.</p><p>InQurix reads the documents in folders you choose so you can search inside them, connect related records and analyse them: words, amounts, invoice numbers, people and meaning. Everything is processed on this computer, and search keeps working offline once its local components are installed.</p><button type="button" className="primary" onClick={() => setStep(1)}>Get started</button></>}
       {step === 1 && <><h1>Choose folders to search</h1><p>InQurix never scans your whole computer. Add the folders that hold your documents. You can change this later.</p>
         <ul className="ob-sources">{sources.map((s) => <li key={s.id}>{s.path} <span className="hint">{s.docs} documents</span></li>)}</ul>
         <button type="button" onClick={async () => { await inv('sources:add'); load(); }}>Add folder…</button>

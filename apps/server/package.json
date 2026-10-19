@@ -2,7 +2,7 @@
   "name": "@inqurix/server",
   "version": "0.1.0",
   "private": true,
-  "description": "InQurix Server - accounts, company workspace, permission-aware search, billing",
+  "description": "InQurix Server: accounts, company workspaces, permissions and billing for The Local Intelligence and Analysis Engine",
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {

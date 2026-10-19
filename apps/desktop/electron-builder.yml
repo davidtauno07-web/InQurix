@@ -32,6 +32,7 @@ nsis:
   createDesktopShortcut: true
   runAfterFinish: true
 linux:
+  synopsis: The Local Intelligence and Analysis Engine
   target: [AppImage, deb]
   category: Office
   executableName: inqurix

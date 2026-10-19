@@ -72,6 +72,7 @@ li > .hint, td .hint { display: inline; }
 .settings .setting { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); max-width: 760px; }
 .settings label.setting { justify-content: flex-start; }
 .onboarding { max-width: 640px; margin: 60px auto; text-align: center; padding: 20px; } .ob-logo { width: 96px; height: 96px; border-radius: 16px; } .ob-sources { text-align: left; } .onboarding .row { justify-content: center; margin-top: 16px; }
+.tagline { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: var(--muted); margin-top: -8px; }
 .investigations { padding: 0 4px; }
 .inv-scope { margin: 8px 0; }
 .inv-types { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
