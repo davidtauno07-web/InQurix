@@ -18,4 +18,5 @@ export async function sendMail(m: Mail): Promise<void> {
   outbox.push(m);
   if (outbox.length > 100) outbox.shift();
   log.info({ to: m.to, subject: m.subject }, 'SMTP not configured; email kept in the development outbox');
+  if (config.NODE_ENV !== 'test') console.log(`\n--- Email to ${m.to}: ${m.subject} ---\n${m.text}\n---\n`);
 }
