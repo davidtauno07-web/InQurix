@@ -27,7 +27,7 @@ Document contents, the index and your searches stay on your computer, and search
 
 - the local index (built on your machine);
 - the semantic-search model (bundled in installers; `npm run models -w @inqurix/desktop` when running from source). Without it, keyword, reference and amount search still work;
-- OCR language data for scanned documents. When running from source on Windows or macOS it is downloaded on first use, so the first OCR run needs internet.
+- OCR language data for scanned documents. It is not bundled yet: unless Tesseract data is already installed on the system, it is downloaded on the first OCR run (from source or installer) and cached, so that first run needs internet.
 
 Features that are network services by nature need a connection and a running InQurix server: company workspaces, accounts, Google sign-in and billing.
 
