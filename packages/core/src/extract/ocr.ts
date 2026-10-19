@@ -23,34 +23,70 @@ type TesseractWorker = { recognize: (img: Buffer | Uint8Array) => Promise<{ data
 
 let workerPromise: Promise<TesseractWorker> | undefined;
 let workerKey = '';
+let loadFailure: { key: string; at: number; message: string } | undefined;
+const LOAD_RETRY_MS = 5 * 60_000;
 
 async function getWorker(opts: OcrOptions): Promise<TesseractWorker> {
   const key = `${opts.langPath}|${opts.lang}`;
+  if (loadFailure?.key === key && Date.now() - loadFailure.at < LOAD_RETRY_MS) throw new Error(loadFailure.message);
   if (!workerPromise || key !== workerKey) {
+    if (workerPromise) void discardWorker();
     workerKey = key;
+    const lang = opts.lang ?? 'eng';
+    if (opts.langPath && !/^https?:/.test(opts.langPath) && ![`${lang}.traineddata`, `${lang}.traineddata.gz`].some((f) => fs.existsSync(path.join(opts.langPath!, f)))) {
+      throw new Error(`OCR language data (${lang}.traineddata) was not found in ${opts.langPath}.`);
+    }
     const { createWorker } = await import('tesseract.js');
-    workerPromise = createWorker(opts.lang ?? 'eng', 1, {
+    // Language-data load errors (e.g. no internet for the first download) only reach errorHandler, so they are raced here.
+    let ready = false;
+    let failLoad: (e: Error) => void = () => undefined;
+    const loadError = new Promise<never>((_, reject) => { failLoad = reject; });
+    const created = (createWorker(lang, 1, {
       ...(opts.langPath ? { langPath: opts.langPath } : {}),
       ...(opts.cachePath ? { cachePath: opts.cachePath } : {}),
-      gzip: opts.langPath ? fs.existsSync(path.join(opts.langPath, `${opts.lang ?? 'eng'}.traineddata.gz`)) : true,
+      gzip: opts.langPath && !/^https?:/.test(opts.langPath) ? fs.existsSync(path.join(opts.langPath, `${lang}.traineddata.gz`)) : true,
       logger: () => undefined,
-    }) as unknown as Promise<TesseractWorker>;
+      // Without a handler tesseract.js rethrows worker errors outside any promise, which kills the process.
+      errorHandler: (e: unknown) => { if (!ready) failLoad(new Error(errorMessage(e))); },
+    }) as unknown as Promise<TesseractWorker>).then((w) => { ready = true; return w; });
+    loadError.catch(() => created.then((w) => w.terminate()).catch(() => undefined));
+    const p: Promise<TesseractWorker> = Promise.race([created, loadError]).catch((e: unknown) => {
+      const message = `OCR language data could not be loaded (the first OCR run needs internet to download it): ${errorMessage(e)}`;
+      if (workerPromise === p) { workerPromise = undefined; loadFailure = { key, at: Date.now(), message }; }
+      throw new Error(message);
+    });
+    workerPromise = p;
   }
   return workerPromise;
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** A worker that failed mid-job may be left in a broken state (e.g. aborted WASM), so it is replaced. */
+async function discardWorker(): Promise<void> {
+  const p = workerPromise;
+  workerPromise = undefined;
+  const w = await p?.catch(() => undefined);
+  await w?.terminate().catch(() => undefined);
+}
+
 export async function terminateOcr(): Promise<void> {
-  if (workerPromise) {
-    const w = await workerPromise.catch(() => undefined);
-    workerPromise = undefined;
-    await w?.terminate();
-  }
+  loadFailure = undefined;
+  await discardWorker();
 }
 
 /** Run OCR on an image buffer (PNG/JPEG/TIFF/BMP). Runs locally; nothing leaves the machine. */
 export async function ocrImage(img: Uint8Array, opts: OcrOptions = {}): Promise<OcrPageResult> {
   const worker = await getWorker(opts);
-  const { data } = await worker.recognize(Buffer.from(img));
+  let data: { text: string; confidence: number; blocks?: unknown };
+  try {
+    ({ data } = await worker.recognize(Buffer.from(img)));
+  } catch (e) {
+    await discardWorker();
+    throw new Error(`OCR could not read this image (it may be damaged or in an unsupported format): ${errorMessage(e)}`);
+  }
   const min = opts.minWordConfidence ?? 60;
   let words = 0;
   let uncertain = 0;

@@ -13,6 +13,9 @@
 | Status `partial` | Some content was extracted, but a limit was hit or part of the file could not be read (for example, OCR was skipped after 50 pages). |
 | Status `unavailable` | The file could not be read (permissions, offline network drive). It is retried on the next scan. Files under a folder that cannot be read are kept, not deleted. |
 | Large files | Default limits: 200 MB per file, 2,000 PDF pages, 200,000 sheet rows, ZIP ≤ 5,000 entries / 500 MB uncompressed / ratio 200, 120 s per file. |
+| Image or scanned PDF `failed` with "OCR could not read this image" | The image is damaged or in a format Tesseract cannot decode. Only that file fails; the rest of the folder keeps indexing. |
+| Images `failed` with "OCR language data could not be loaded" | The first OCR run could not download the English language data (no internet, proxy or firewall). Other files are unaffected; OCR is retried after a few minutes or on the next scan. |
+| Status `failed`: "stopped the indexer N times" | Reading this file crashed the indexer repeatedly, so it is skipped until the file changes. Please report the file type. |
 | Scanned PDFs or images have no text | OCR uses English Tesseract data. It is not bundled yet: unless Tesseract data is installed system-wide, it is downloaded on the first OCR run and cached in `ocr-cache` next to the index, so that first run needs internet. Very low-quality scans may produce little text. |
 | Edits not picked up | The watcher reindexes changed files within seconds. Periodic reconciliation also catches changes made while the app was closed. Check that indexing is not paused and that the source is enabled. |
 

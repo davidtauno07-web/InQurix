@@ -119,4 +119,23 @@ describe('extractors', () => {
     expect(o.result.segments.map((s) => s.text).join(' ')).toContain('DN-5520');
     await terminateOcr();
   }, 60_000);
+  it.skipIf(!TESSDATA)('reports a damaged image as failed without crashing, and OCR keeps working', async () => {
+    const damaged = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]), Buffer.from('JFIF damaged image data '.repeat(20))]);
+    const bad = await extractDocument(damaged, 'photo.jpg', { ocr: { langPath: TESSDATA } });
+    expect(bad.result.status).toBe('failed');
+    const good = await extractDocument(read('scanned-delivery-note-DN-5520.pdf'), 'scanned.pdf', { ocr: { langPath: TESSDATA } });
+    expect(good.result.status).toBe('indexed');
+    await terminateOcr();
+  }, 60_000);
+  it('reports missing or undownloadable OCR language data as a failure instead of crashing', async () => {
+    const damaged = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64, 1)]);
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'inqurix-notess-'));
+    const missing = await extractDocument(damaged, 'scan.jpg', { ocr: { langPath: empty } });
+    expect(missing.result.status).toBe('failed');
+    expect(missing.result.warnings[0]?.message).toMatch(/language data/);
+    const offline = await extractDocument(damaged, 'scan2.jpg', { ocr: { langPath: 'http://127.0.0.1:9/tessdata', cachePath: empty } });
+    expect(offline.result.status).toBe('failed');
+    expect(offline.result.warnings[0]?.message).toMatch(/needs internet/);
+    await terminateOcr();
+  }, 60_000);
 });

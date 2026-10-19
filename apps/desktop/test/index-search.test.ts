@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDatabase, type DB } from '../src/main/db/index.js';
-import { indexFile, scanSource, removeFile, type SourceRow } from '../src/main/indexer/pipeline.js';
+import { indexFile, scanSource, removeFile, MAX_ATTEMPTS, type SourceRow } from '../src/main/indexer/pipeline.js';
 import { SearchEngine, HL_START } from '../src/main/search/engine.js';
 import { createEmbedder, type Embedder } from '../src/main/search/embed.js';
 
@@ -51,6 +51,20 @@ describe('indexing', () => {
   it('refuses files outside the authorized folder', async () => {
     const r = await indexFile(db, source, path.join(tmp, 'outside.txt'));
     expect(r.outcome).toBe('skipped');
+  });
+  it('skips a file that repeatedly stopped the indexer until it changes', async () => {
+    const f = path.join(docs, 'crash-loop.txt');
+    fs.writeFileSync(f, 'first version');
+    const first = await indexFile(db, source, f);
+    db.prepare("UPDATE documents SET status = 'queued', attempts = ? WHERE id = ?").run(MAX_ATTEMPTS, first.docId!);
+    const r = await indexFile(db, source, f);
+    expect(r.outcome).toBe('failed');
+    expect((db.prepare('SELECT status_detail FROM documents WHERE id = ?').get(first.docId!) as { status_detail: string }).status_detail).toMatch(/skipped until the file changes/);
+    fs.writeFileSync(f, 'second version, edited');
+    const again = await indexFile(db, source, f);
+    expect(again.status).toBe('indexed');
+    expect((db.prepare('SELECT attempts FROM documents WHERE id = ?').get(first.docId!) as { attempts: number }).attempts).toBe(0);
+    removeFile(db, f);
   });
   it('skips unchanged files on rescan', async () => {
     const r = await indexFile(db, source, path.join(docs, 'quote-Q-2207.txt'));

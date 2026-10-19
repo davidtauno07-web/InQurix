@@ -44,6 +44,8 @@ export interface ScanProgress {
 
 const ALWAYS_EXCLUDED_DIRS = new Set(['node_modules', '.git', '.svn', '.hg', '$recycle.bin', 'system volume information', '.trash', '.trashes', '.cache', '__pycache__', '.spotlight-v100', '.fseventsd']);
 const SUPPORTED = new Set(SUPPORTED_EXTENSIONS);
+/** A file whose processing never completed this many times (the indexer crashed) is skipped until it changes. */
+export const MAX_ATTEMPTS = 3;
 const OK_STATUSES = new Set(['indexed', 'partial', 'empty', 'unsupported', 'encrypted', 'ocr_required', 'skipped']);
 
 /** Glob subset: `*`, `**`, `?`. Patterns without a slash match any path component. */
@@ -122,10 +124,10 @@ export async function discover(root: string, opts: { includeHidden: boolean; exc
   return out;
 }
 
-interface DocRow { id: number; size: number; mtime_ms: number; hash: string | null; status: string; extractor_version: number }
+interface DocRow { id: number; size: number; mtime_ms: number; hash: string | null; status: string; extractor_version: number; attempts: number }
 
 function getDoc(db: DB, abs: string): DocRow | undefined {
-  return db.prepare("SELECT id, size, mtime_ms, hash, status, extractor_version FROM documents WHERE path = ? AND attachment_name = ''").get(abs) as DocRow | undefined;
+  return db.prepare("SELECT id, size, mtime_ms, hash, status, extractor_version, attempts FROM documents WHERE path = ? AND attachment_name = ''").get(abs) as DocRow | undefined;
 }
 
 function upsertDoc(db: DB, source: SourceRow, abs: string, fields: { size: number; mtimeMs: number; status: string; detail?: string | null; parentId?: number; attachment?: string }): number {
@@ -169,7 +171,7 @@ function writeResult(db: DB, docId: number, abs: string, displayName: string, re
     insRec.run(docId, segOrd !== undefined ? segIds.get(segOrd) ?? null : null, r.docType, r.number ?? null, r.numberNormalized ?? null, r.supplier ?? null, r.supplierNormalized ?? null, r.date ?? null, r.total ?? null, r.currency ?? null, JSON.stringify(r));
   }
   const m = result.metadata;
-  db.prepare(`UPDATE documents SET kind = ?, status = ?, status_detail = ?, warnings = ?, title = ?, author = ?, doc_created_at = ?, doc_modified_at = ?, page_count = ?, metadata = ?, ocr_confidence = ?, segment_count = ?, extractor_version = ?, indexed_at = ?, hash = ? WHERE id = ?`).run(
+  db.prepare(`UPDATE documents SET kind = ?, status = ?, status_detail = ?, warnings = ?, title = ?, author = ?, doc_created_at = ?, doc_modified_at = ?, page_count = ?, metadata = ?, ocr_confidence = ?, segment_count = ?, extractor_version = ?, indexed_at = ?, hash = ?, attempts = 0 WHERE id = ?`).run(
     result.kind, result.status, result.warnings[0]?.message ?? null, JSON.stringify(result.warnings), m.title ?? null, m.author ?? null, m.createdAt ?? null, m.modifiedAt ?? null, m.pageCount ?? m.slideCount ?? null, JSON.stringify(m), result.ocrConfidence ?? null, result.segments.length, EXTRACTOR_VERSION, now(), hash, docId,
   );
   db.prepare('DELETE FROM documents_fts WHERE rowid = ?').run(docId);
@@ -195,6 +197,15 @@ export async function indexFile(db: DB, source: SourceRow, abs: string, opts: Pi
   if (existing && existing.size === st.size && existing.mtime_ms === mtimeMs && existing.extractor_version === EXTRACTOR_VERSION && OK_STATUSES.has(existing.status)) {
     return { outcome: 'unchanged', docId: existing.id, status: existing.status };
   }
+  const sameFile = !!existing && existing.size === st.size && existing.mtime_ms === mtimeMs;
+  if (existing && sameFile && existing.attempts >= MAX_ATTEMPTS) {
+    if (existing.status !== 'failed') {
+      db.prepare("UPDATE documents SET status = 'failed', status_detail = ? WHERE id = ?").run(`Reading this file stopped the indexer ${existing.attempts} times, so it is skipped until the file changes.`, existing.id);
+      logEvent(db, 'error', 'extract_crashed', `${abs}: skipped after ${existing.attempts} interrupted attempts`, { docId: existing.id, sourceId: source.id });
+    }
+    return { outcome: 'failed', docId: existing.id, status: 'failed' };
+  }
+  if (existing && !sameFile) db.prepare('UPDATE documents SET attempts = 0 WHERE id = ?').run(existing.id);
   if (st.size > limits.maxFileBytes) {
     const id = tx(db, () => {
       const id = upsertDoc(db, source, abs, { size: st.size, mtimeMs, status: 'skipped', detail: `Larger than the ${Math.round(limits.maxFileBytes / 1e6)} MB limit` });
