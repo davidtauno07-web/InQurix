@@ -2,7 +2,7 @@
 
 ## What stays on your computer
 
-- **Documents and their extracted text never leave the computer** in the desktop app. Indexing, search, meaning-based search (local MiniLM model), OCR and investigations all run locally. The desktop app makes no network requests while searching or investigating; the E2E suite checks this.
+- **Documents and their extracted text never leave the computer** in the desktop app. Indexing, search, meaning-based search (local MiniLM model), OCR and investigations all run locally. The desktop app makes no network requests while searching or investigating; the E2E suite checks this. The one exception during indexing: if OCR language data is not installed, the first OCR run downloads it (the language model only, never document content).
 - InQurix only indexes folders **you explicitly authorise**. It never scans the whole computer. You can pause indexing, exclude paths, or remove a folder, and removing a folder deletes its index entries.
 - Search history can be turned off or cleared in Settings.
 - The company server only receives documents that a user deliberately uploads to a shared company source.

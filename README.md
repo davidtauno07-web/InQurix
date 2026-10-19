@@ -17,7 +17,7 @@ The desktop app (Windows and macOS; Linux for development) indexes only the fold
 - **Discover**: index authorised folders (PDF, Word, Excel, PowerPoint, CSV, text, RTF, HTML, email and scanned images via OCR) and search them by words, exact references, amounts, dates and meaning.
 - **Connect**: show related documents that share invoice, PO, quote, contract or payment references, suppliers and bank details.
 - **Analyze**: run user-started investigations for duplicate invoices and payments, invoice-vs-PO/quote/contract/delivery differences, supplier bank-detail changes, payment-redirection indicators, missing records, possible cost savings and important dates, with the calculations shown.
-- **Understand**: every result and finding shows its evidence and exact location, cautious wording, what remains unresolved, and review states you can export.
+- **Understand**: every search result shows its evidence and exact location. Investigation findings add cautious wording, what remains unresolved, review states and exportable reports.
 
 The current state of each feature, including what is not finished, is tracked in [docs/STATUS.md](docs/STATUS.md).
 

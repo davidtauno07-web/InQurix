@@ -37,7 +37,7 @@ npm test -w @inqurix/server
 ## Desktop
 
 - The search model (`Xenova/all-MiniLM-L6-v2`, quantised ONNX) is downloaded once by `npm run models -w @inqurix/desktop` into `apps/desktop/resources/models` (git-ignored) and bundled into installers. Without it, search still works but meaning-based search is turned off.
-- OCR uses Tesseract.js with the English model fetched into the same folder.
+- OCR uses Tesseract.js. The English language data is not bundled: the app uses `resources/tessdata/eng.traineddata` or a system Tesseract install if present, otherwise Tesseract.js downloads it on the first OCR run and caches it in `ocr-cache` next to the index.
 - `INQURIX_USER_DATA=<dir>` runs the app with a separate profile (used by the E2E tests).
 
 ## Packaging
